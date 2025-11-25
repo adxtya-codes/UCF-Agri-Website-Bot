@@ -1,0 +1,127 @@
+[
+  {
+    "id": "tip_001",
+    "title": "Fertilizer Timing",
+    "content": "Apply fertilizer early morning or evening to reduce evaporation and improve absorption.",
+    "created_at": "2025-11-21T00:00:00.000Z",
+    "send_date": "2025-11-25",
+    "send_time": "02:00"
+  },
+  {
+    "id": "tip_002",
+    "title": "Crop Rotation",
+    "content": "Rotate crops every season to maintain soil fertility and prevent pest buildup.",
+    "created_at": "2025-11-21T00:00:00.000Z",
+    "send_date": "2025-11-25"
+  },
+  {
+    "id": "tip_003",
+    "title": "Watering Guide",
+    "content": "Water plants deeply but less frequently to encourage strong root development.",
+    "created_at": "2025-11-21T00:00:00.000Z",
+    "send_date": "2025-11-27",
+    "send_time": "08:00"
+  },
+  {
+    "id": "tip_004",
+    "title": "UCF GrowMax Usage",
+    "content": "Use UCF GrowMax weekly during growing season for balanced nutrition and better yields.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_005",
+    "title": "Disease Detection",
+    "content": "Check leaves regularly for yellowing or spots - early detection prevents major crop loss.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_006",
+    "title": "Soil Health",
+    "content": "Mix organic compost with chemical fertilizers for sustainable soil health.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_007",
+    "title": "Plant Spacing",
+    "content": "Ensure proper spacing between plants for adequate sunlight and air circulation.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_008",
+    "title": "Pest Control",
+    "content": "Use neem oil spray as natural pest control before resorting to chemical pesticides.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_009",
+    "title": "Farm Diary",
+    "content": "Maintain a farm diary to track fertilizer applications, rainfall, and crop performance.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_010",
+    "title": "Rain Warning",
+    "content": "Avoid fertilizer application just before heavy rains to prevent nutrient runoff.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_011",
+    "title": "Soil pH",
+    "content": "Monitor soil pH regularly - most crops prefer slightly acidic to neutral soil (6.0-7.0).",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_012",
+    "title": "Nitrogen Application",
+    "content": "Apply nitrogen fertilizers in split doses for better efficiency and reduced wastage.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_013",
+    "title": "Mulching",
+    "content": "Use crop residues as mulch to conserve moisture and add organic matter to soil.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_014",
+    "title": "Soil Testing",
+    "content": "Get soil tested every year to understand nutrient deficiencies and fertilizer requirements.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_015",
+    "title": "Phosphorus Usage",
+    "content": "Apply phosphorus fertilizers at planting time for strong root and flower development.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_016",
+    "title": "Potassium Benefits",
+    "content": "Use potassium-rich fertilizers during fruiting stage to improve fruit quality and shelf life.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_017",
+    "title": "Green Manuring",
+    "content": "Practice green manuring by growing legumes and incorporating them into soil.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_018",
+    "title": "Foliar Feeding",
+    "content": "Foliar feeding provides quick nutrient boost during critical growth stages.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_019",
+    "title": "Over-fertilization",
+    "content": "Avoid over-fertilization - it can burn plants and pollute groundwater.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  },
+  {
+    "id": "tip_020",
+    "title": "Field Hygiene",
+    "content": "Maintain good field hygiene by removing diseased plants immediately to prevent spread.",
+    "created_at": "2025-11-21T00:00:00.000Z"
+  }
+]

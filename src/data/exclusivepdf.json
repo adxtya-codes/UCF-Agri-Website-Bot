@@ -1,0 +1,90 @@
+[
+  {
+    "title": "Advanced Crop Disease Management Guide",
+    "description": "Comprehensive guide covering identification, prevention, and treatment of major crop diseases",
+    "filename": "Tanasa_Hygiene_Profile (12).pdf",
+    "url": "https://utfs.io/f/womSGRJo71rekCAxduf4C0TlLyFvZsunbqGVUm3AwzxBh6J8",
+    "category": "Disease Management",
+    "size": "2.48 MB",
+    "pages": 48,
+    "created_date": "2024-10-15",
+    "id": 1
+  },
+  {
+    "id": 2,
+    "title": "Soil Health & Fertility Optimization",
+    "description": "Expert techniques for soil testing, nutrient management, and organic farming practices",
+    "filename": "soil_health_guide.pdf",
+    "url": "https://example.com/pdfs/soil_health_guide.pdf",
+    "category": "Soil Management",
+    "size": "3.1 MB",
+    "pages": 62,
+    "created_date": "2024-09-20"
+  },
+  {
+    "id": 3,
+    "title": "Precision Agriculture Technology Guide",
+    "description": "Modern farming techniques using IoT, drones, and smart irrigation systems",
+    "filename": "precision_agriculture.pdf",
+    "url": "https://example.com/pdfs/precision_agriculture.pdf",
+    "category": "Technology",
+    "size": "4.2 MB",
+    "pages": 78,
+    "created_date": "2024-11-01"
+  },
+  {
+    "id": 4,
+    "title": "Seasonal Crop Planning Calendar",
+    "description": "Month-by-month planting and harvesting guide for optimal yield",
+    "filename": "seasonal_planning.pdf",
+    "url": "https://example.com/pdfs/seasonal_planning.pdf",
+    "category": "Planning",
+    "size": "1.8 MB",
+    "pages": 32,
+    "created_date": "2024-08-10"
+  },
+  {
+    "id": 5,
+    "title": "Organic Pest Control Methods",
+    "description": "Natural and eco-friendly pest management strategies for sustainable farming",
+    "filename": "organic_pest_control.pdf",
+    "url": "https://example.com/pdfs/organic_pest_control.pdf",
+    "category": "Pest Control",
+    "size": "2.9 MB",
+    "pages": 55,
+    "created_date": "2024-10-05"
+  },
+  {
+    "id": 6,
+    "title": "Crop Management Guide",
+    "description": "Comprehensive guide for crop management and best practices",
+    "filename": "crop_guide.pdf",
+    "url": "https://example.com/crop_guide.pdf",
+    "category": "Farming",
+    "size": "2.5 MB",
+    "pages": 45,
+    "created_date": "2025-01-01"
+  },
+  {
+    "id": 7,
+    "title": "testing",
+    "description": "Comprehensive guide for crop management and best practices",
+    "filename": "crop_guide.pdf",
+    "url": "https://example.com/crop_guide.pdf",
+    "category": "Farming",
+    "size": "2.5 MB",
+    "pages": 45,
+    "created_date": "2025-01-01"
+  },
+  {
+    "id": 8,
+    "title": "testing",
+    "description": "Best practices for pest control in agriculture",
+    "filename": "pest_control.pdf",
+    "url": "https://example.com/pest.pdf",
+    "category": "Pest Control",
+    "size": "1.8 MB",
+    "pages": 32,
+    "created_date": "2025-01-02"
+  }
+]

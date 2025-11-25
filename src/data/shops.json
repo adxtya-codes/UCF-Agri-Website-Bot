@@ -1,0 +1,101 @@
+[
+  {
+    "id": "1",
+    "name": "FarmBiz Harare",
+    "address": "Cr 5th and Robert Mugabe Way, Amtec Building Opposite 4th Bus Rank, Harare, Zimbabwe",
+    "phone": "+263917241830",
+    "email": "farmbizsaleshre@gmail.com",
+    "owner": "Borniface Mubvakure",
+    "timing": "N/A",
+    "latitude": -17.8292,
+    "longitude": 31.0522
+  },
+  {
+    "id": "2",
+    "name": "FarmBiz Mutare",
+    "address": "No. 4 First Street, Mutare, Zimbabwe",
+    "phone": "+263713536206",
+    "email": "farmbizsalesmutare@gmail.com",
+    "owner": "Success Tangwena",
+    "timing": "N/A",
+    "latitude": -18.9667,
+    "longitude": 32.6333
+  },
+  {
+    "id": "3",
+    "name": "FarmBiz Gweru",
+    "address": "No. 66 Second Street, Robert Mugabe, Gweru, Zimbabwe",
+    "phone": "+263719241843",
+    "email": "salesgweru@farmbiz.co.zw",
+    "owner": "Mr Madanhi",
+    "timing": "N/A",
+    "latitude": -19.4614,
+    "longitude": 29.8022
+  },
+  {
+    "id": "4",
+    "name": "FarmBiz Macheke",
+    "address": "Lot 1 Loop Road, Hotel Complex, Macheke, Zimbabwe",
+    "phone": "+263719241835",
+    "email": "farmbizsalesmacheke@gmail.com",
+    "owner": "Thomas Poperai",
+    "timing": "N/A",
+    "latitude": -18.1454,
+    "longitude": 31.8471
+  },
+  {
+    "id": "5",
+    "name": "FarmBiz Chinhoyi",
+    "address": "203/A1 Magamba Way, Chinhoyi, Zimbabwe",
+    "phone": "+263712316210",
+    "email": "farmbizsaleschinhoyi@gmail.com",
+    "owner": "Shumira Madzokere",
+    "timing": "N/A",
+    "latitude": -17.3497,
+    "longitude": 30.1944
+  },
+  {
+    "id": "6",
+    "name": "FarmBiz Bulawayo",
+    "address": "Cnr 10th Avenue and Jason Moyo, Bulawayo, Zimbabwe",
+    "phone": "+263719241839",
+    "email": "farmbizsalesbulawayo@gmail.com",
+    "owner": "Allan Mutota",
+    "timing": "N/A",
+    "latitude": -20.17,
+    "longitude": 28.58
+  },
+  {
+    "id": "7",
+    "name": "FarmBiz Marondera",
+    "address": "115 Pine Street Extension, Marondera, Zimbabwe",
+    "phone": "+263719241832",
+    "email": "farmbizsalesmarondera@gmail.com",
+    "owner": "Peter Zvenyika",
+    "timing": "N/A",
+    "latitude": -18.1897,
+    "longitude": 31.5467
+  },
+  {
+    "id": "8",
+    "name": "FarmBiz Chipinge",
+    "address": "No. 283C Street Hurudza House, 7th Street, Chipinge, Zimbabwe",
+    "phone": "+263719241837",
+    "email": "farmbizsaleschipinge@gmail.com",
+    "owner": "Mwashayanyi",
+    "timing": "N/A",
+    "latitude": -20.2,
+    "longitude": 32.62
+  },
+  {
+    "id": "9",
+    "name": "FarmBiz Chiredzi",
+    "address": "733 Masasa Road, Concord Complex, Chiredzi, Zimbabwe",
+    "phone": "+263712316255",
+    "email": "farmbizsaleschiredzi@gmail.com",
+    "owner": "Allen Chiwisi",
+    "timing": "N/A",
+    "latitude": -21.0389,
+    "longitude": 31.6778
+  }
+]

@@ -1,0 +1,138 @@
+[
+  {
+    "phone": "263783506625@c.us",
+    "name": "My name is Sean",
+    "email": "sean@ucfzim.com",
+    "created_at": "2025-11-11T17:27:14.154Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-12-22",
+    "conversation_state": "main_menu",
+    "location": {
+      "latitude": -17.7816634,
+      "longitude": 31.1072776
+    },
+    "last_interaction": "2025-11-11T17:27:14.154Z",
+    "phone_real": "263783506625"
+  },
+  {
+    "phone": "919810288621@c.us",
+    "name": "Dev",
+    "email": null,
+    "created_at": "2025-11-21T11:42:24.325Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-12-21T11:45:39.660Z",
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": "https://utfs.io/f/yucx8FoPCHb8csLkjb8DITzbijv6pNFrxM4kPEydlmAWHah8",
+    "last_interaction": "2025-11-21T11:42:24.325Z",
+    "phone_real": "919810288621"
+  },
+  {
+    "phone": "95335489773704@lid",
+    "name": "Sean",
+    "email": null,
+    "created_at": "2025-11-21T17:39:44.489Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-12-22",
+    "conversation_state": "main_menu",
+    "location": {
+      "latitude": -17.7817488,
+      "longitude": 31.1072901
+    },
+    "recipet": "https://utfs.io/f/womSGRJo71re34vnyxLMkx8KPzqZQB0Uhfe1GWCAwELnRb6H",
+    "last_interaction": "2025-11-21T17:39:44.489Z",
+    "phone_real": "95335489773704"
+  },
+  {
+    "phone": "96336250691709@lid",
+    "name": "Chiks",
+    "email": null,
+    "created_at": "2025-11-21T17:51:11.393Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-11-22",
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": null,
+    "last_interaction": "2025-11-21T17:51:11.393Z",
+    "phone_real": "96336250691709"
+  },
+  {
+    "phone": "126573088927821@lid",
+    "name": "Meix",
+    "email": null,
+    "created_at": "2025-11-21T18:39:08.151Z",
+    "is_premium": true,
+    "premium_expiry_date": null,
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": null,
+    "last_interaction": "2025-11-21T18:39:08.152Z",
+    "phone_real": "126573088927821"
+  },
+  {
+    "phone": "140239356076035@lid",
+    "name": "Emmanuel",
+    "email": null,
+    "created_at": "2025-11-21T19:07:18.100Z",
+    "is_premium": false,
+    "premium_expiry_date": null,
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": null,
+    "last_interaction": "2025-11-21T19:07:18.100Z",
+    "phone_real": "140239356076035"
+  },
+  {
+    "phone": "918810202799@c.us",
+    "phone_real": "918810202799",
+    "name": "adideveloper",
+    "email": "hello this is testing to see",
+    "created_at": "2025-11-24T19:29:18.354Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-12-25T11:46:19.385Z",
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": "https://utfs.io/f/womSGRJo71re920FgoXRnu6lZmFSUvtGbgYIqVyWcNCX2Mhp",
+    "last_interaction": "2025-11-24T19:29:18.354Z",
+    "phone_numeric": "+918810202789"
+  },
+  {
+    "phone": "54821247782915@lid",
+    "phone_real": "54821247782915",
+    "name": "Dorcus",
+    "email": null,
+    "created_at": "2025-11-24T19:57:49.020Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-12-24T20:24:17.012Z",
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": "https://utfs.io/f/womSGRJo71reBMlLZQhShYQgzRmOXI73uBd4oJe8NwaV0yPU",
+    "last_interaction": "2025-11-24T19:57:49.020Z"
+  },
+  {
+    "phone": "236206222790816@lid",
+    "name": "Munashe",
+    "email": null,
+    "created_at": "2025-11-25T07:44:57.558Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-12-25T07:46:53.918Z",
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": "https://utfs.io/f/womSGRJo71reyL05sBSvOpXrVj2gJt3CoIwTAMZKE5RW0SfD",
+    "last_interaction": "2025-11-25T07:44:57.558Z",
+    "phone_numeric": "0713953370"
+  },
+  {
+    "phone": "263773526659@c.us",
+    "name": "Elyon",
+    "email": "Elyonekativu@gmail.com",
+    "created_at": "2025-11-25T12:04:52.925Z",
+    "is_premium": true,
+    "premium_expiry_date": "2025-11-26",
+    "conversation_state": "main_menu",
+    "location": null,
+    "recipet": null,
+    "last_interaction": "2025-11-25T12:04:52.925Z",
+    "phone_numeric": "0773526659"
+  }
+]

@@ -1,0 +1,168 @@
+[
+  {
+    "id": "prod_001",
+    "name": "Urea",
+    "composition": {
+      "N": 46,
+      "P": 0,
+      "K": 0
+    },
+    "description": "High nitrogen fertilizer used to promote leafy green vegetative growth.",
+    "function": [
+      "Enhances chlorophyll production for photosynthesis.",
+      "Stimulates rapid foliage and stem development.",
+      "Improves protein synthesis in crops."
+    ],
+    "crop_usage": [
+      "Maize",
+      "Wheat",
+      "Rice",
+      "Sugarcane",
+      "Cotton"
+    ],
+    "application_timing": "Top dressing during active growth (2–6 weeks after emergence). Split applications recommended.",
+    "soil_type": "Neutral to slightly acidic soils. Avoid on alkaline soils.",
+    "benefits": [
+      "Fast-acting and cost-effective nitrogen source.",
+      "Boosts yield and overall plant vigor."
+    ]
+  },
+  {
+    "id": "prod_002",
+    "name": "Ammonium Nitrate 34.5%",
+    "composition": {
+      "N": 34.5,
+      "P": 0,
+      "K": 0
+    },
+    "description": "Nitrogen fertilizer containing both nitrate and ammonium forms for quick and sustained uptake.",
+    "function": [
+      "Provides quick nitrogen uptake and long-term availability.",
+      "Enhances root growth and green leaf color.",
+      "More stable than urea under hot, dry conditions."
+    ],
+    "crop_usage": [
+      "Tobacco",
+      "Vegetables",
+      "Sugarcane",
+      "Wheat",
+      "Maize"
+    ],
+    "application_timing": "Top dressing during rapid vegetative growth when moisture is adequate.",
+    "soil_type": "Effective on acidic and sandy soils.",
+    "benefits": [
+      "Quick visible results with reduced nitrogen losses.",
+      "Increases crop protein and chlorophyll levels."
+    ]
+  },
+  {
+    "id": "prod_003",
+    "name": "Cereal Blend 6:23:23",
+    "composition": {
+      "N": 6,
+      "P": 23,
+      "K": 23
+    },
+    "description": "Balanced fertilizer ideal for cereals that need strong roots, flowering, and grain filling.",
+    "function": [
+      "Promotes root establishment and early growth.",
+      "Improves flowering and grain formation.",
+      "Enhances disease resistance and grain quality."
+    ],
+    "crop_usage": [
+      "Maize",
+      "Wheat",
+      "Barley",
+      "Sorghum",
+      "Millet"
+    ],
+    "application_timing": "Basal fertilizer applied during planting.",
+    "soil_type": "Ideal for loamy soils deficient in phosphorus.",
+    "benefits": [
+      "Enhances root development and yield potential.",
+      "Improves crop maturity and grain uniformity."
+    ]
+  },
+  {
+    "id": "prod_004",
+    "name": "Compound C 6:15:12",
+    "composition": {
+      "N": 6,
+      "P": 15,
+      "K": 12
+    },
+    "description": "UCF NPK fertilizer for balanced plant growth and soil fertility improvement.",
+    "function": [
+      "Supports root, shoot, and flower development.",
+      "Improves grain filling and fruit setting."
+    ],
+    "crop_usage": [
+      "Maize",
+      "Groundnuts",
+      "Tobacco",
+      "Soybeans",
+      "Horticultural crops"
+    ],
+    "application_timing": "Basal fertilizer applied before or during planting.",
+    "soil_type": "Suitable for most agricultural soils, especially low-phosphorus soils.",
+    "benefits": [
+      "Improves soil fertility and plant vigor.",
+      "Enhances crop yield and consistency."
+    ]
+  },
+  {
+    "id": "prod_005",
+    "name": "Compound D 7:14:7",
+    "composition": {
+      "N": 7,
+      "P": 14,
+      "K": 7
+    },
+    "description": "Starter fertilizer focusing on early crop development and strong root establishment.",
+    "function": [
+      "Encourages early root growth and seedling vigor.",
+      "Supports leaf development and disease resistance."
+    ],
+    "crop_usage": [
+      "Maize",
+      "Beans",
+      "Sunflower",
+      "Soya Beans",
+      "Small Grains"
+    ],
+    "application_timing": "Basal fertilizer used at planting time.",
+    "soil_type": "Best for neutral to acidic soils.",
+    "benefits": [
+      "Improves germination and seedling establishment.",
+      "Prepares plants for later nutrient uptake."
+    ]
+  },
+  {
+    "id": "prod_006",
+    "name": "High C 6:28:23",
+    "composition": {
+      "N": 6,
+      "P": 28,
+      "K": 23
+    },
+    "description": "High-phosphorus and potassium fertilizer supporting flowering, fruiting, and seed formation.",
+    "function": [
+      "Promotes flowering and fruiting.",
+      "Enhances grain filling and crop quality.",
+      "Improves plant strength and root-shoot balance."
+    ],
+    "crop_usage": [
+      "Maize",
+      "Wheat",
+      "Tomatoes",
+      "Potatoes",
+      "Fruit Trees"
+    ],
+    "application_timing": "Applied before flowering or fruit setting (mid-growth stage).",
+    "soil_type": "Ideal for phosphorus and potassium deficient soils.",
+    "benefits": [
+      "Increases grain size, fruit weight, and sugar content.",
+      "Improves yield quality and storage properties."
+    ]
+  }
+]

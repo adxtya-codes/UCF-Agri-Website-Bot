@@ -1,0 +1,20 @@
+[
+    {
+        "id": "ret_001",
+        "name": "Farmbiz",
+        "full_name": "FARMBIZ PVT LTD",
+        "created_at": "2025-11-25T11:07:00.000Z"
+    },
+    {
+        "id": "ret_002",
+        "name": "Mega Save",
+        "full_name": "MEGA SAVE",
+        "created_at": "2025-11-25T11:07:00.000Z"
+    },
+    {
+        "id": "ret_003",
+        "name": "Gain",
+        "full_name": "GAIN",
+        "created_at": "2025-11-25T11:07:00.000Z"
+    }
+]

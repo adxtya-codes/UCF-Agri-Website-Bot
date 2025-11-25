@@ -1,0 +1,62 @@
+{
+  "name": "ucf-agri-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp AI Chatbot for UCF Fertilizers - Product info, shop locator, farming tips, and premium AI services",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "bot": "nodemon src/bot.js",
+    "dev": "next dev",
+    "build": "next build",
+    "next-start": "next start"
+  },
+  "keywords": [
+    "whatsapp",
+    "chatbot",
+    "agriculture",
+    "ai",
+    "openai",
+    "huggingface"
+  ],
+  "author": "UCF Fertilizers",
+  "license": "MIT",
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@types/papaparse": "^5.5.0",
+    "axios": "^1.6.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.554.0",
+    "next": "^16.0.3",
+    "node-cron": "^3.0.3",
+    "openai": "^4.20.1",
+    "papaparse": "^5.5.3",
+    "qrcode-terminal": "^0.12.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sharp": "^0.34.5",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "uploadthing": "^7.7.4",
+    "whatsapp-web.js": "^1.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.22",
+    "nodemon": "^3.0.2",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.9.3"
+  }
+}

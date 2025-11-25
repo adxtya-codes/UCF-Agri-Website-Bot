@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1764077654808",
+    "phone": "918810202799@c.us",
+    "name": "adidev",
+    "question": "hello testing",
+    "created_at": "2025-11-25T13:34:14.808Z",
+    "status": "pending"
+  },
+  {
+    "id": "1764077851423",
+    "phone": "263773526659@c.us",
+    "name": "Elyon",
+    "question": "How do i apply my fertilizer?",
+    "created_at": "2025-11-25T13:37:31.423Z",
+    "status": "pending"
+  }
+]

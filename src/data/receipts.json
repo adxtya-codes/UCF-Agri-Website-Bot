@@ -1,0 +1,88 @@
+[
+  {
+    "phone": "918810202799@c.us",
+    "hash": "7cbb52f314c0c7215909168d861cc25b",
+    "verified_at": "2025-11-21T11:41:34.941Z",
+    "retailer_name": "FARMIBIZ PRIVATE LIMITED",
+    "purchase_date": null,
+    "ucf_products": [
+      "UCF COMPLD"
+    ],
+    "total_amount": "30.00",
+    "image": "https://utfs.io/f/yucx8FoPCHb8cLDBkBa8DITzbijv6pNFrxM4kPEydlmAWHah",
+    "status": "approved"
+  },
+  {
+    "phone": "919810288621@c.us",
+    "hash": "46a622c397c4c115815f160e9b07c091",
+    "verified_at": "2025-11-21T11:45:39.663Z",
+    "retailer_name": "FARMEIZ PRIVATE LIMITED",
+    "purchase_date": null,
+    "ucf_products": [
+      "UCF COMPLD"
+    ],
+    "total_amount": "30.00",
+    "image": "https://utfs.io/f/yucx8FoPCHb8csLkjb8DITzbijv6pNFrxM4kPEydlmAWHah8",
+    "status": "approved"
+  },
+  {
+    "phone": "95335489773704@lid",
+    "hash": "3ee4decc7708ef3e33e093327ade237c",
+    "verified_at": "2025-11-22T11:03:37.385Z",
+    "retailer_name": "Farmbiz Retailer",
+    "purchase_date": "2025-10-19",
+    "ucf_products": [
+      "UCF COMPOUND D fert"
+    ],
+    "total_amount": "$33.00",
+    "image": "https://utfs.io/f/womSGRJo71re34vnyxLMkx8KPzqZQB0Uhfe1GWCAwELnRb6H"
+  },
+  {
+    "phone": "236206222790816@lid",
+    "hash": "d9b29b1745d9079fa77e8645baadcc8d",
+    "verified_at": "2025-11-24T19:44:21.640Z",
+    "retailer_name": "Farbiz Retailer",
+    "purchase_date": "2025-11-21",
+    "ucf_products": [
+      "UCF Compound D Fert"
+    ],
+    "total_amount": "28.00",
+    "image": "https://utfs.io/f/womSGRJo71reeHqUSOUkQVAbRy7lOXYxMBmcFotuJ5zNTUir"
+  },
+  {
+    "phone": "54821247782915@lid",
+    "hash": "3127c5757e83b6b8b186eeda28f6961d",
+    "verified_at": "2025-11-24T20:24:17.014Z",
+    "retailer_name": "Farmbiz Retailer",
+    "purchase_date": "2025-11-21",
+    "ucf_products": [
+      "UCF Compound D Fert",
+      "UCF AN Fert"
+    ],
+    "total_amount": "$93.00",
+    "image": "https://utfs.io/f/womSGRJo71reBMlLZQhShYQgzRmOXI73uBd4oJe8NwaV0yPU"
+  },
+  {
+    "phone": "236206222790816@lid",
+    "hash": "6ec41074baae76b7a9055c5f24b8f554",
+    "verified_at": "2025-11-25T07:46:53.921Z",
+    "retailer_name": "KADOMA METAL",
+    "purchase_date": "2026-04-25",
+    "ucf_products": [
+      "Myron Control Flex"
+    ],
+    "total_amount": "98.52",
+    "image": "https://utfs.io/f/womSGRJo71reyL05sBSvOpXrVj2gJt3CoIwTAMZKE5RW0SfD"
+  },
+  {
+    "phone": "918810202799@c.us",
+    "hash": "798eb540564967b264ce6311df7fe4c0",
+    "verified_at": "2025-11-25T11:46:19.389Z",
+    "status": "verified",
+    "retailer_name": "Farmbiz Pvt Ltd",
+    "purchase_date": "24/11/2025 16:27:56",
+    "ucf_products": [],
+    "total_amount": "70.00",
+    "image": "https://utfs.io/f/womSGRJo71re920FgoXRnu6lZmFSUvtGbgYIqVyWcNCX2Mhp"
+  }
+]

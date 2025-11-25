@@ -1,0 +1,191 @@
+[
+  {
+    "crop": "Cabbage",
+    "compound_at_planting": "L",
+    "rate_at_planting": "500 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "200 kg/ha",
+    "timing": "Split at 3 and 6 wap",
+    "remarks": "Best top-dress is 100 AN 100 J"
+  },
+  {
+    "crop": "Citrus",
+    "compound_at_planting": "Z",
+    "rate_at_planting": "400 g/tree",
+    "compound_top_dressing": "J",
+    "rate_top_dressing": "800 g/tree",
+    "timing": "According to age",
+    "remarks": "Fertilizer according to yield"
+  },
+  {
+    "crop": "Cotton",
+    "compound_at_planting": "L",
+    "rate_at_planting": "300 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "200 kg/ha",
+    "timing": "At 8 wae or flowering",
+    "remarks": "Extra 50–100 kg/ha AN for irrigation"
+  },
+  {
+    "crop": "Cowpea (nyemba)",
+    "compound_at_planting": "D",
+    "rate_at_planting": "150 kg/ha",
+    "compound_top_dressing": null,
+    "rate_top_dressing": "Nil",
+    "timing": "100 J at 6 wap",
+    "remarks": "J on poor sandy soils"
+  },
+  {
+    "crop": "Finger millet",
+    "compound_at_planting": "D",
+    "rate_at_planting": "150 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "100 kg/ha",
+    "timing": "4–6 wae",
+    "remarks": ""
+  },
+  {
+    "crop": "Fruit trees",
+    "compound_at_planting": "Z",
+    "rate_at_planting": "400 g/tree",
+    "compound_top_dressing": "J",
+    "rate_top_dressing": "300 g/tree",
+    "timing": "In split applications",
+    "remarks": "Increase fertilizer according to age and yield"
+  },
+  {
+    "crop": "Groundnuts",
+    "compound_at_planting": "L",
+    "rate_at_planting": "300 kg/ha",
+    "compound_top_dressing": "Gypsum",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "Over plants at pegging",
+    "remarks": ""
+  },
+  {
+    "crop": "Maize",
+    "compound_at_planting": "D or Z",
+    "rate_at_planting": "300 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "250 kg/ha",
+    "timing": "Split at 3 and 6 wae",
+    "remarks": "Z one year in three"
+  },
+  {
+    "crop": "Onions",
+    "compound_at_planting": "C",
+    "rate_at_planting": "1000 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "3–4 wap",
+    "remarks": ""
+  },
+  {
+    "crop": "Pearl millet",
+    "compound_at_planting": "D or Z",
+    "rate_at_planting": "200 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "At 6 wae",
+    "remarks": ""
+  },
+  {
+    "crop": "Potatoes",
+    "compound_at_planting": "S",
+    "rate_at_planting": "1000 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "2–3 wae",
+    "remarks": "Extra 100 kg/ha C and AN after 6 months"
+  },
+  {
+    "crop": "Rape",
+    "compound_at_planting": "C",
+    "rate_at_planting": "500 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "200 kg/ha",
+    "timing": "",
+    "remarks": ""
+  },
+  {
+    "crop": "Sorghum",
+    "compound_at_planting": "D or Z",
+    "rate_at_planting": "250 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "200 kg/ha",
+    "timing": "4–6 wae",
+    "remarks": "Best on clay soils"
+  },
+  {
+    "crop": "Soybean",
+    "compound_at_planting": "L",
+    "rate_at_planting": "250 kg/ha",
+    "compound_top_dressing": null,
+    "rate_top_dressing": "Nil",
+    "timing": "",
+    "remarks": "Inoculants needed"
+  },
+  {
+    "crop": "Sugar beet",
+    "compound_at_planting": "Z",
+    "rate_at_planting": "300 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "At 4 wae",
+    "remarks": "Lime 3 weeks before planting. Do not apply boron"
+  },
+  {
+    "crop": "Sunflower",
+    "compound_at_planting": "L",
+    "rate_at_planting": "250 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "At 6 wae",
+    "remarks": "Boron essential"
+  },
+  {
+    "crop": "Tobacco (barley)",
+    "compound_at_planting": "B",
+    "rate_at_planting": "700 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "300–400 kg/ha",
+    "timing": "Half at 3 and 5 wap",
+    "remarks": ""
+  },
+  {
+    "crop": "Tobacco (flue cured)",
+    "compound_at_planting": "B,V or C",
+    "rate_at_planting": "600–700 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "100–150 kg/ha",
+    "timing": "At 3 wap",
+    "remarks": ""
+  },
+  {
+    "crop": "Tobacco (seed beds)",
+    "compound_at_planting": "S",
+    "rate_at_planting": "150 g/m²",
+    "compound_top_dressing": "Sodium nitrate",
+    "rate_top_dressing": "10–20 g/m²",
+    "timing": "At 4 wae",
+    "remarks": ""
+  },
+  {
+    "crop": "Tomatoes",
+    "compound_at_planting": "B",
+    "rate_at_planting": "1200 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "150 kg/ha",
+    "timing": "Every 2 weeks after first fruit",
+    "remarks": "J is good for top-dressing"
+  },
+  {
+    "crop": "Vegetables",
+    "compound_at_planting": "C",
+    "rate_at_planting": "600 kg/ha",
+    "compound_top_dressing": "AN",
+    "rate_top_dressing": "200 kg/ha",
+    "timing": "Half at 3 and 6 wap",
+    "remarks": "J is good for top-dressing"
+  }
+]

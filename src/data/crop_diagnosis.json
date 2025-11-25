@@ -1,0 +1,26 @@
+[
+  {
+    "id": "diag_001",
+    "phone": "918810202799@c.us",
+    "created_at": "2025-11-21T00:11:45.147Z",
+    "image": "https://utfs.io/f/yucx8FoPCHb8yHPZt5oPCHb8IXgNZJn6xefiV7rTk1WmBzLh",
+    "status": "diagnosed"
+  },
+  {
+    "id": "diag_002",
+    "phone": "918810202799@c.us",
+    "created_at": "2025-11-21T11:38:01.701Z",
+    "image": "https://utfs.io/f/yucx8FoPCHb89SE1Sxgjm01WTIYlysC3wLP2xpVJkn5zSNht",
+    "status": "on_hold"
+  },
+  {
+    "phone": "263773526659@c.us",
+    "created_at": "2025-11-24T19:35:51.599Z",
+    "image": "https://utfs.io/f/womSGRJo71reKPquZMeQVkRbBw3smpxCX7cfyhAdeGMlaZ4Y"
+  },
+  {
+    "phone": "54821247782915@lid",
+    "created_at": "2025-11-24T20:26:40.370Z",
+    "image": "https://utfs.io/f/womSGRJo71reOb1hXoXRG1kRmTOylQp2dMh05WVasAuE9NoB"
+  }
+]
