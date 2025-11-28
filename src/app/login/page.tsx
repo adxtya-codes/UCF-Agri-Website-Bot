@@ -45,8 +45,8 @@ export default function LoginPage() {
 
             if (res.ok) {
                 console.log("[LOGIN PAGE] Success, redirecting...");
-                router.push("/");
-                router.refresh();
+                // Use window.location for full page reload to ensure cookie is read
+                window.location.href = "/";
             } else {
                 setError(data.error || "Invalid credentials");
             }
