@@ -11,9 +11,6 @@ services:
     env_file:
       - .env
     volumes:
-      # Persist WhatsApp session data (REQUIRED - contains auth tokens)
-      - wwebjs_auth:/app/.wwebjs_auth
-      - wwebjs_cache:/app/.wwebjs_cache
       # Persist data files (users, receipts, products)
       - app_data:/app/src/data
       # Persist temp files (uploaded images)
@@ -26,7 +23,5 @@ networks:
     driver: bridge
 
 volumes:
-  wwebjs_auth:
-  wwebjs_cache:
   app_data:
   app_temp:

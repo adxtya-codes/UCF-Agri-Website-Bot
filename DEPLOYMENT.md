@@ -48,8 +48,6 @@
    docker run -d \
      --name ucf-agri-bot \
      -p 3000:3000 \
-     -v $(pwd)/.wwebjs_auth:/app/.wwebjs_auth \
-     -v $(pwd)/.wwebjs_cache:/app/.wwebjs_cache \
      -v $(pwd)/src/data:/app/src/data \
      -v $(pwd)/temp:/app/temp \
      --env-file .env \
@@ -84,7 +82,7 @@ When you first run the bot, you'll need to scan a QR code:
    - Tap "Link a Device"
    - Scan the QR code from the terminal
 
-3. **Session persistence**: The WhatsApp session is saved in `.wwebjs_auth` and will persist across container restarts.
+3. **Session**: The WhatsApp session is NOT persisted. You will need to scan the QR code each time the container is deployed or restarted.
 
 ## Accessing the Dashboard
 
@@ -201,8 +199,6 @@ docker-compose up -d
 ## Data Persistence
 
 The following directories are persisted using Docker volumes:
-- `.wwebjs_auth` - WhatsApp session data
-- `.wwebjs_cache` - WhatsApp cache
 - `src/data` - All JSON data files (users, receipts, etc.)
 - `temp` - Temporary image files
 
