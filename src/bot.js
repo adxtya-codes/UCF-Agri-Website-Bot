@@ -1,5 +1,6 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -58,14 +59,39 @@ const activatedUsers = new Set();
 // Keep-alive interval reference
 let keepAliveInterval = null;
 
+// Track last message before disconnection
+let lastMessageBeforeDisconnect = null;
+const lastMessageFilePath = path.join(__dirname, '../temp/last_message.json');
+
 // QR Code generation
-client.on('qr', (qr) => {
+client.on('qr', async (qr) => {
   console.log('📱 Scan this QR code with WhatsApp:');
   qrcode.generate(qr, { small: true });
+
+  // Save QR code as image
+  try {
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const qrImagePath = path.join(tempDir, 'qrcode.png');
+    await QRCode.toFile(qrImagePath, qr, {
+      width: 400,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    console.log('✅ QR code saved to:', qrImagePath);
+  } catch (error) {
+    console.error('❌ Error saving QR code image:', error);
+  }
 });
 
 // Client ready
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log('✅ UCF Agri-Bot is ready!');
   console.log('🌾 Bot Name: Sam');
   console.log('📞 Waiting for messages...');
@@ -87,6 +113,50 @@ client.on('ready', () => {
 
   // Initialize daily tips system
   initializeDailyTips(client);
+
+  // Check for last message before disconnection and reply to it
+  try {
+    if (fs.existsSync(lastMessageFilePath)) {
+      const lastMessageData = JSON.parse(fs.readFileSync(lastMessageFilePath, 'utf8'));
+      console.log('📨 Found last message before disconnection:', lastMessageData);
+
+      // Wait a bit for the client to fully initialize
+      setTimeout(async () => {
+        try {
+          // Create a mock message object to process
+          const chat = await client.getChatById(lastMessageData.from);
+          await chat.sendMessage('🔄 *Bot Reconnected*\n\nI\'m back online! Let me respond to your last message...');
+
+          // Send the last message through the normal message handler
+          // We'll simulate processing it by getting the chat and handling the message
+          console.log('🔄 Processing last message:', lastMessageData.body);
+
+          // Get user and process the message
+          const user = getUser(lastMessageData.from);
+          const userState = userStates.get(lastMessageData.from) || { state: 'main_menu' };
+
+          // Handle based on state
+          if (userState.state === 'main_menu') {
+            // Send main menu as a response
+            await chat.sendMessage(getMainMenu(user.name));
+          } else {
+            // Send a general response
+            await chat.sendMessage('I received your message. Type "menu" to see available options.');
+          }
+
+          console.log('✅ Replied to last message successfully');
+        } catch (replyError) {
+          console.error('❌ Error replying to last message:', replyError);
+        }
+      }, 3000);
+
+      // Delete the last message file after processing
+      fs.unlinkSync(lastMessageFilePath);
+      console.log('🗑️ Cleared last message file');
+    }
+  } catch (error) {
+    console.error('❌ Error processing last message:', error);
+  }
 });
 
 // Handle authentication
@@ -101,7 +171,6 @@ client.on('auth_failure', (msg) => {
 // Handle disconnection with auto-reconnect
 client.on('disconnected', (reason) => {
   console.log('⚠️ Client disconnected:', reason);
-  console.log('🔄 Attempting to reconnect in 5 seconds...');
 
   // Clear keep-alive interval
   if (keepAliveInterval) {
@@ -109,15 +178,23 @@ client.on('disconnected', (reason) => {
     keepAliveInterval = null;
   }
 
-  // Attempt reconnection after 5 seconds
-  setTimeout(() => {
-    console.log('🚀 Reinitializing client...');
-    client.initialize().catch(err => {
-      console.error('❌ Reconnection failed:', err);
-      console.log('🔄 Will retry in 10 seconds...');
-      setTimeout(() => client.initialize(), 10000);
-    });
-  }, 5000);
+  // Save last message before disconnection
+  if (lastMessageBeforeDisconnect) {
+    try {
+      const tempDir = path.join(__dirname, '../temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      fs.writeFileSync(lastMessageFilePath, JSON.stringify(lastMessageBeforeDisconnect, null, 2));
+      console.log('💾 Saved last message before disconnection');
+    } catch (error) {
+      console.error('❌ Error saving last message:', error);
+    }
+  }
+
+  console.log('ℹ️ Bot disconnected. Please restart manually to avoid file locking issues.');
+  console.log('ℹ️ The bot will automatically reply to the last message when restarted.');
 });
 
 // Main message handler
@@ -128,6 +205,14 @@ client.on('message', async (message) => {
     const hasMedia = message.hasMedia;
 
     console.log(`\n📨 Message from ${phoneNumber}: ${messageBody.substring(0, 50)}...`);
+
+    // Track this as the last message (for reconnection handling)
+    lastMessageBeforeDisconnect = {
+      from: phoneNumber,
+      body: messageBody,
+      hasMedia: hasMedia,
+      timestamp: Date.now()
+    };
 
     // Auto-activate bot for new users
     if (!activatedUsers.has(phoneNumber)) {

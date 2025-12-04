@@ -13,7 +13,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, Receipt as ReceiptIcon, Package, Store, Lightbulb, Crown, Loader2 } from "lucide-react";
+import { Users, Receipt as ReceiptIcon, Package, Store, Lightbulb, Crown, Loader2, QrCode } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
     const [users, setUsers] = useState<User[]>([]);
@@ -137,6 +138,23 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 ))}
+
+                {/* WhatsApp QR Code Card */}
+                <Link href="/qr">
+                    <Card className="cursor-pointer hover:bg-accent transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">
+                                WhatsApp QR Code
+                            </CardTitle>
+                            <QrCode className="h-4 w-4 text-green-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-sm text-muted-foreground">
+                                View & scan QR code
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
 
             {/* Recent Users */}
