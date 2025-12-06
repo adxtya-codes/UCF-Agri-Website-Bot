@@ -168,7 +168,7 @@ client.on('auth_failure', (msg) => {
   console.error('❌ Authentication failed:', msg);
 });
 
-// Handle disconnection with auto-reconnect
+// Handle disconnection with auto-reconnect and QR regeneration
 client.on('disconnected', (reason) => {
   console.log('⚠️ Client disconnected:', reason);
 
@@ -193,8 +193,33 @@ client.on('disconnected', (reason) => {
     }
   }
 
-  console.log('ℹ️ Bot disconnected. Please restart manually to avoid file locking issues.');
-  console.log('ℹ️ The bot will automatically reply to the last message when restarted.');
+  console.log('🔄 Attempting to regenerate QR code...');
+
+  // Destroy the client and clear auth session
+  setTimeout(async () => {
+    try {
+      await client.destroy();
+      console.log('✅ Client destroyed');
+
+      // Clear auth session directory
+      const authPath = path.join(__dirname, '../.wwebjs_auth');
+      if (fs.existsSync(authPath)) {
+        fs.rmSync(authPath, { recursive: true, force: true });
+        console.log('🗑️ Cleared authentication session');
+      }
+
+      // Re-initialize the client to generate new QR code
+      console.log('🔄 Re-initializing client...');
+      console.log('📱 A new QR code will be generated. Please scan it to reconnect.');
+
+      // Restart the bot process
+      process.exit(0); // Exit and let Docker/process manager restart
+
+    } catch (error) {
+      console.error('❌ Error during reconnection:', error);
+      console.log('ℹ️ Please restart the bot manually to generate a new QR code.');
+    }
+  }, 2000); // Wait 2 seconds before attempting reconnection
 });
 
 // Main message handler

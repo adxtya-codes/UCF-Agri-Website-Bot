@@ -43,6 +43,8 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'rm -f /app/.wwebjs_cache/*/SingletonCookie 2>/dev/null || true' >> /app/start.sh && \
     echo 'rm -f /app/.wwebjs_cache/*/SingletonSocket 2>/dev/null || true' >> /app/start.sh && \
     echo 'rm -rf /app/.wwebjs_cache/*/Singleton* 2>/dev/null || true' >> /app/start.sh && \
+    echo '# Clear WhatsApp auth session to force new QR code generation' >> /app/start.sh && \
+    echo 'rm -rf /app/.wwebjs_auth 2>/dev/null || true' >> /app/start.sh && \
     echo '# Start services' >> /app/start.sh && \
     echo 'npm run next-start &' >> /app/start.sh && \
     echo 'npm start' >> /app/start.sh && \
