@@ -76,6 +76,8 @@ client.on('qr', async (qr) => {
     }
 
     const qrImagePath = path.join(tempDir, 'qrcode.png');
+    const timestamp = new Date().toISOString();
+
     await QRCode.toFile(qrImagePath, qr, {
       width: 400,
       margin: 2,
@@ -84,7 +86,17 @@ client.on('qr', async (qr) => {
         light: '#FFFFFF'
       }
     });
+
+    // Save timestamp metadata to verify QR regeneration
+    const metadataPath = path.join(tempDir, 'qr_metadata.json');
+    fs.writeFileSync(metadataPath, JSON.stringify({
+      generated_at: timestamp,
+      qr_hash: qr.substring(0, 20) + '...' // First 20 chars for verification
+    }, null, 2));
+
     console.log('✅ QR code saved to:', qrImagePath);
+    console.log('🕐 Generated at:', timestamp);
+    console.log('🌐 Access QR code at: http://localhost:3000/qr');
   } catch (error) {
     console.error('❌ Error saving QR code image:', error);
   }
@@ -208,16 +220,26 @@ client.on('disconnected', (reason) => {
         console.log('🗑️ Cleared authentication session');
       }
 
+      // Clear cache directory for complete cleanup
+      const cachePath = path.join(__dirname, '../.wwebjs_cache');
+      if (fs.existsSync(cachePath)) {
+        fs.rmSync(cachePath, { recursive: true, force: true });
+        console.log('🗑️ Cleared cache directory');
+      }
+
       // Re-initialize the client to generate new QR code
       console.log('🔄 Re-initializing client...');
       console.log('📱 A new QR code will be generated. Please scan it to reconnect.');
+      console.log('🌐 Access QR code at: http://localhost:3000/qr');
 
-      // Restart the bot process
-      process.exit(0); // Exit and let Docker/process manager restart
+      // Exit with code 1 to trigger Docker restart
+      // Docker restart policy will restart the container and generate new QR
+      process.exit(1);
 
     } catch (error) {
       console.error('❌ Error during reconnection:', error);
-      console.log('ℹ️ Please restart the bot manually to generate a new QR code.');
+      console.log('ℹ️ Forcing restart to generate new QR code...');
+      process.exit(1); // Force restart even on error
     }
   }, 2000); // Wait 2 seconds before attempting reconnection
 });

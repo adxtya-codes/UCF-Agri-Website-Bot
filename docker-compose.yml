@@ -4,19 +4,28 @@ services:
   agri-bot:
     build: .
     container_name: ucf-agri-bot
-    restart: unless-stopped
+    restart: always # Changed from unless-stopped to always for guaranteed restarts
     environment:
       - NODE_ENV=production
       - SESSION_NAME=UCF_AGRIBOT
     env_file:
       - .env
+    ports:
+      # Expose dashboard for QR code access
+      - "3000:3000"
     volumes:
       # Persist data files (users, receipts, products)
       - app_data:/app/src/data
-      # Persist temp files (uploaded images)
+      # Persist temp files (uploaded images and QR codes)
       - app_temp:/app/temp
     networks:
       - agri-bot-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   agri-bot-network:
