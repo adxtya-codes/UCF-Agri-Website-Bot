@@ -50,6 +50,57 @@ const client = new Client({
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   }
 });
+
+/**
+ * Safe message sending with retry logic
+ * Handles common errors like markedUnread and implements exponential backoff
+ */
+async function safeSendMessage(target, content, options = {}, retries = 3) {
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      let result;
+
+      // Check if target is a message object (has reply method) or a chat ID
+      if (typeof target === 'object' && target.reply) {
+        result = await target.reply(content, options);
+      } else {
+        result = await client.sendMessage(target, content, options);
+      }
+
+      // Success
+      if (attempt > 1) {
+        console.log(`✅ Message sent successfully on attempt ${attempt}`);
+      }
+      return result;
+
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+
+      console.error(`❌ Message send error (attempt ${attempt}/${retries}):`, error.message);
+
+      // Handle specific errors
+      if (error.message && error.message.includes('markedUnread')) {
+        console.log(`⚠️ markedUnread error detected, retrying in ${waitTime}ms...`);
+      } else if (error.message && error.message.includes('Protocol error')) {
+        console.log(`⚠️ Protocol error detected, retrying in ${waitTime}ms...`);
+      } else if (error.message && error.message.includes('Execution context was destroyed')) {
+        console.log(`⚠️ Context destroyed, retrying in ${waitTime}ms...`);
+      }
+
+      if (isLastAttempt) {
+        console.error(`❌ Failed to send message after ${retries} attempts`);
+        throw error;
+      }
+
+      // Wait before retry with exponential backoff
+      await delay(waitTime);
+    }
+  }
+}
+
 // Track user states with timestamps for cleanup
 const userStates = new Map();
 
@@ -270,7 +321,7 @@ client.on('message', async (message) => {
       const user = getUser(phoneNumber);
 
       // Send activation message
-      await message.reply(`🌾 *Welcome to UCF Agri-Bot!*\n\nHello! I'm Sam, your agricultural assistant.\n\nMay I know your name?`);
+      await safeSendMessage(message, `🌾 *Welcome to UCF Agri-Bot!*\n\nHello! I'm Sam, your agricultural assistant.\n\nMay I know your name?`);
       userStates.set(phoneNumber, {
         state: 'awaiting_name',
         lastActivity: Date.now()
@@ -308,7 +359,7 @@ client.on('message', async (message) => {
 
     // Global menu command - works from ANY state
     if (messageBody.toLowerCase().trim() === 'menu') {
-      await message.reply(getMainMenu(user.name));
+      await safeSendMessage(message, getMainMenu(user.name));
       userStates.set(phoneNumber, { state: 'main_menu' });
       return;
     }
@@ -318,7 +369,7 @@ client.on('message', async (message) => {
     const productsOnlyRegex = /^\s*(ucf\s*)?products\s*$/i;
     if (showProductsRegex.test(messageBody) || productsOnlyRegex.test(messageBody)) {
       const products = loadData('products.json');
-      await message.reply(formatProductList(products) + '\n_Type your product question or "menu" to go back_');
+      await safeSendMessage(message, formatProductList(products) + '\n_Type your product question or "menu" to go back_');
       userStates.set(phoneNumber, { state: 'product_qa' });
       return;
     }
@@ -331,7 +382,7 @@ client.on('message', async (message) => {
 
     if (messageBody.toLowerCase().trim() === 'tip-stats') {
       const stats = getDailyTipsStats();
-      await message.reply(`📊 *Daily Tips Statistics*\n\n👥 Total Users: ${stats.totalUsers}\n✅ Active Users: ${stats.activeUsers}\n💡 Available Tips: ${stats.totalTips}\n⏰ Schedule: ${stats.lastScheduledTime}`);
+      await safeSendMessage(message, `📊 *Daily Tips Statistics*\n\n👥 Total Users: ${stats.totalUsers}\n✅ Active Users: ${stats.activeUsers}\n💡 Available Tips: ${stats.totalTips}\n⏰ Schedule: ${stats.lastScheduledTime}`);
       return;
     }
 
@@ -379,7 +430,7 @@ client.on('message', async (message) => {
 
   } catch (error) {
     console.error('❌ Error handling message:', error);
-    await message.reply('Sorry, I encountered an error. Please try again or type "menu" to return to main menu. 🙏');
+    await safeSendMessage(message, 'Sorry, I encountered an error. Please try again or type "menu" to return to main menu. 🙏');
   }
 });
 
@@ -398,15 +449,15 @@ async function handleGreeting(message, user) {
   const phoneNumber = message.from;
 
   if (!user.name) {
-    await message.reply(`👋 Hello! Welcome to UCF Agri-Bot!\n\nI'm Sam, your agricultural assistant. 🌾\n\nMay I know your name?`);
+    await safeSendMessage(message, `👋 Hello! Welcome to UCF Agri-Bot!\n\nI'm Sam, your agricultural assistant. 🌾\n\nMay I know your name?`);
     userStates.set(phoneNumber, { state: 'awaiting_name' });
   } else {
     // Show premium menu for premium users, regular menu for others
     if (isPremiumActive(user)) {
-      await message.reply(getPremiumMenu(user.name));
+      await safeSendMessage(message, getPremiumMenu(user.name));
       userStates.set(phoneNumber, { state: 'premium_menu' });
     } else {
-      await message.reply(getMainMenu(user.name));
+      await safeSendMessage(message, getMainMenu(user.name));
       userStates.set(phoneNumber, { state: 'main_menu' });
     }
   }
@@ -424,7 +475,7 @@ async function handleNameInput(message, user, messageBody) {
   // Name is now required
   updateUser(phoneNumber, { name: messageBody });
 
-  await message.reply(`Thanks, ${messageBody}! 👋\n\nCould you please share your phone number before the next step \n\nExample: +263 798765432\n\n_(Don't forget to add + Country Code)_`);
+  await safeSendMessage(message, `Thanks, ${messageBody}! 👋\n\nCould you please share your phone number before the next step \n\nExample: +263 798765432\n\n_(Don't forget to add + Country Code)_`);
   userStates.set(phoneNumber, { state: 'awaiting_phone' });
 }
 
@@ -441,10 +492,10 @@ async function handlePhoneInput(message, user, messageBody) {
   const updatedUser = getUser(phoneNumber);
 
   if (isPremiumActive(updatedUser)) {
-    await message.reply(`Perfect! All set. 😊\n\n${getPremiumMenu(user.name)}`);
+    await safeSendMessage(message, `Perfect! All set. 😊\n\n${getPremiumMenu(user.name)}`);
     userStates.set(phoneNumber, { state: 'premium_menu' });
   } else {
-    await message.reply(`Perfect! All set. 😊\n\n${getMainMenu(user.name)}`);
+    await safeSendMessage(message, `Perfect! All set. 😊\n\n${getMainMenu(user.name)}`);
     userStates.set(phoneNumber, { state: 'main_menu' });
   }
 }
@@ -459,7 +510,7 @@ async function handleMainMenu(message, user, messageBody) {
   // Option 1: Crop Diagnosis (Premium)
   if (input.includes('1') || input.includes('diagnosis') || input.includes('crop')) {
     if (isPremiumActive(user)) {
-      await message.reply(`🔬 *Crop Diagnosis Service*
+      await safeSendMessage(message, `🔬 *Crop Diagnosis Service*
 
 Please send a clear photo of:
 📸 Affected crop/plant leaves
@@ -470,7 +521,7 @@ I'll analyze it and provide treatment recommendations! 🌿
 _Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_crop_image' });
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
     return;
@@ -479,10 +530,10 @@ _Type "menu" to go back to main menu_`);
   // Option 2: Fertilizer Calculator (Premium)
   if (input.includes('2') || input.includes('fertilizer') || input.includes('calculator') || input.includes('quantity')) {
     if (isPremiumActive(user)) {
-      await message.reply(`🧮 *UCF Fertilizer Calculator*\n\nWelcome to the UCF Fertilizer Calculator!\n\nWhich plant are you planning to grow?\n\nExample: "Maize", "Cotton", "Cabbage"\n\n_Type "menu" to go back to main menu_`);
+      await safeSendMessage(message, `🧮 *UCF Fertilizer Calculator*\n\nWelcome to the UCF Fertilizer Calculator!\n\nWhich plant are you planning to grow?\n\nExample: "Maize", "Cotton", "Cabbage"\n\n_Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'calculator_plant' });
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
     return;
@@ -490,7 +541,7 @@ _Type "menu" to go back to main menu_`);
 
   // Option 3: Find Shop
   if (input.includes('3') || input.includes('shop') || input.includes('dealer') || input.includes('location')) {
-    await message.reply(`📍 *Find Nearest UCF Dealer*
+    await safeSendMessage(message, `📍 *Find Nearest UCF Dealer*
 
 Please share your live location so I can find the nearest shops.
 
@@ -505,19 +556,19 @@ _Type "menu" to go back to main menu_`);
   if (input.includes('4') || input.includes('expert') || input.includes('agronomist')) {
     if (isPremiumActive(user)) {
       if (!user.name) {
-        await message.reply(`To connect you with our expert, I need some information.
+        await safeSendMessage(message, `To connect you with our expert, I need some information.
 
 What's your name?
 
 _Type "menu" to go back to main menu_`);
         userStates.set(phoneNumber, { state: 'awaiting_expert_name' });
       } else if (!user.email) {
-        await message.reply(`Thanks! What's your email address?
+        await safeSendMessage(message, `Thanks! What's your email address?
 
 _Type "menu" to go back to main menu_`);
         userStates.set(phoneNumber, { state: 'awaiting_expert_email' });
       } else {
-        await message.reply(`👨‍🌾 *Expert Help Service*
+        await safeSendMessage(message, `👨‍🌾 *Expert Help Service*
 
 Please describe your farming issue or question.
 
@@ -527,7 +578,7 @@ _Type "menu" to go back to main menu_`);
         userStates.set(phoneNumber, { state: 'awaiting_expert_issue' });
       }
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
     return;
@@ -537,10 +588,10 @@ _Type "menu" to go back to main menu_`);
   if (input.includes('5') || input.includes('guide') || input.includes('pdf')) {
     if (isPremiumActive(user)) {
       const pdfs = getExclusivePDFs();
-      await message.reply(`📚 *Exclusive Farming Guides*\n\nChoose a guide to download:\n\n${formatPDFList(pdfs)}\n\nReply with the number (1-${pdfs.length}) to get your PDF!\n\n_Type "menu" to go back to main menu_`);
+      await safeSendMessage(message, `📚 *Exclusive Farming Guides*\n\nChoose a guide to download:\n\n${formatPDFList(pdfs)}\n\nReply with the number (1-${pdfs.length}) to get your PDF!\n\n_Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_pdf_selection' });
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
     return;
@@ -549,7 +600,7 @@ _Type "menu" to go back to main menu_`);
   // Option 6: Product Q&A
   if (input.includes('6') || input.includes('product') || input.includes('fertilizer')) {
     const products = loadData('products.json');
-    await message.reply(`💬 *Product Q&A*\n\nAsk me anything about UCF products!\n\nExamples:\n• "Tell me about cabbagge farming"\n• "Which fertilizer is best for beans farming"\n• "Tell me about Pfumvudza"\n\n${formatProductList(products.slice(0, 3))}\n_Type your question or "menu" to go back_`);
+    await safeSendMessage(message, `💬 *Product Q&A*\n\nAsk me anything about UCF products!\n\nExamples:\n• "Tell me about cabbagge farming"\n• "Which fertilizer is best for beans farming"\n• "Tell me about Pfumvudza"\n\n${formatProductList(products.slice(0, 3))}\n_Type your question or "menu" to go back_`);
     userStates.set(phoneNumber, { state: 'product_qa' });
     return;
   }
@@ -557,10 +608,10 @@ _Type "menu" to go back to main menu_`);
   // Option 7: Premium Access
   if (input.includes('7') || input.includes('premium') || input.includes('verify') || input.includes('receipt')) {
     if (isPremiumActive(user)) {
-      await message.reply(`✅ You already have premium access!\n\n🎉 Valid until: ${formatDate(user.premium_expiry_date)}\n\n*Premium Features:*\n1️⃣ Crop disease diagnosis and Soil results analysis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive Farming Guides\n4️⃣ Priority support\n\n_Reply with 1-4 to use Premium Features, or type "menu" to go back to main menu._`);
+      await safeSendMessage(message, `✅ You already have premium access!\n\n🎉 Valid until: ${formatDate(user.premium_expiry_date)}\n\n*Premium Features:*\n1️⃣ Crop disease diagnosis and Soil results analysis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive Farming Guides\n4️⃣ Priority support\n\n_Reply with 1-4 to use Premium Features, or type "menu" to go back to main menu._`);
       userStates.set(phoneNumber, { state: 'premium_access_info' });
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
     return;
@@ -568,7 +619,7 @@ _Type "menu" to go back to main menu_`);
 
   // Menu command
   if (input === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     return;
   }
 
@@ -585,7 +636,7 @@ async function handlePremiumMenu(message, user, messageBody) {
 
   // Option 1: Crop Diagnosis
   if (input.includes('1') || input.includes('diagnosis') || input.includes('crop')) {
-    await message.reply(`🔬 *Crop Diagnosis Service*
+    await safeSendMessage(message, `🔬 *Crop Diagnosis Service*
 
 Please send a clear photo of:
 📸 Affected crop/plant leaves
@@ -601,19 +652,19 @@ _Type "menu" to go back to main menu_`);
   // Option 2: Expert Help (Premium Only)
   if (input.includes('2') || input.includes('expert') || input.includes('agronomist')) {
     if (!user.name) {
-      await message.reply(`To connect you with our expert, I need some information.
+      await safeSendMessage(message, `To connect you with our expert, I need some information.
 
 What's your name?
 
 _Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_expert_name' });
     } else if (!user.email) {
-      await message.reply(`Thanks! What's your email address?
+      await safeSendMessage(message, `Thanks! What's your email address?
 
 _Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_expert_email' });
     } else {
-      await message.reply(`👨‍🌾 *Expert Help Service*
+      await safeSendMessage(message, `👨‍🌾 *Expert Help Service*
 
 Please describe your farming issue or question.
 
@@ -628,21 +679,21 @@ _Type "menu" to go back to main menu_`);
   // Option 3: Exclusive PDFs (Premium Only)
   if (input.includes('3') || input.includes('pdf') || input.includes('guide')) {
     const pdfs = getExclusivePDFs();
-    await message.reply(`📚 *Exclusive Farming Guides*\n\nChoose a guide to download:\n\n${formatPDFList(pdfs)}\n\nReply with the number (1-${pdfs.length}) to get your PDF!\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `📚 *Exclusive Farming Guides*\n\nChoose a guide to download:\n\n${formatPDFList(pdfs)}\n\nReply with the number (1-${pdfs.length}) to get your PDF!\n\n_Type "menu" to go back to main menu_`);
     userStates.set(phoneNumber, { state: 'awaiting_pdf_selection' });
     return;
   }
 
   // Option 4: Fertilizer Calculator
   if (input.includes('4') || input.includes('fertilizer') || input.includes('calculator') || input.includes('quantity')) {
-    await message.reply(`🧮 *UCF Fertilizer Calculator*\n\nWelcome to the UCF Fertilizer Calculator!\n\nWhich plant are you planning to grow?\n\nExample: "Maize", "Cotton", "Cabbage"\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `🧮 *UCF Fertilizer Calculator*\n\nWelcome to the UCF Fertilizer Calculator!\n\nWhich plant are you planning to grow?\n\nExample: "Maize", "Cotton", "Cabbage"\n\n_Type "menu" to go back to main menu_`);
     userStates.set(phoneNumber, { state: 'calculator_plant' });
     return;
   }
 
   // Option 5: Find Shop
   if (input.includes('5') || input.includes('shop') || input.includes('dealer') || input.includes('location')) {
-    await message.reply(`📍 *Find Nearest UCF Dealer*
+    await safeSendMessage(message, `📍 *Find Nearest UCF Dealer*
 
 Please share your live location so I can find the nearest shops.
 
@@ -656,7 +707,7 @@ _Type "menu" to go back to main menu_`);
   // Option 6: Product Q&A
   if (input.includes('6') || input.includes('product') || input.includes('fertilizer')) {
     const products = loadData('products.json');
-    await message.reply(`💬 *Product Q&A*\n\nAsk me anything about UCF products!\n\nExamples:\n• "Tell me about cabbagge farming"\n• "Which fertilizer is best for beans farming"\n• "Tell me about Pfumvudza"\n
+    await safeSendMessage(message, `💬 *Product Q&A*\n\nAsk me anything about UCF products!\n\nExamples:\n• "Tell me about cabbagge farming"\n• "Which fertilizer is best for beans farming"\n• "Tell me about Pfumvudza"\n
 _Type "menu" to go back to main menu_`);
     userStates.set(phoneNumber, { state: 'product_qa' });
     return;
@@ -664,7 +715,7 @@ _Type "menu" to go back to main menu_`);
 
   // Option 7: Main Menu
   if (input.includes('7') || input.includes('main') || input === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     userStates.set(phoneNumber, { state: 'main_menu' });
     return;
   }
@@ -685,7 +736,7 @@ async function handlePDFSelection(message, user, messageBody) {
   const pdfs = getExclusivePDFs();
 
   if (isNaN(pdfNumber) || pdfNumber < 1 || pdfNumber > pdfs.length) {
-    await message.reply(`❌ Invalid selection. Please choose a number between 1 and ${pdfs.length}.\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `❌ Invalid selection. Please choose a number between 1 and ${pdfs.length}.\n\n_Type "menu" to go back to main menu_`);
     return;
   }
 
@@ -693,7 +744,7 @@ async function handlePDFSelection(message, user, messageBody) {
 
   try {
     // Send PDF information and download link
-    await message.reply(`📚 *${selectedPDF.title}*
+    await safeSendMessage(message, `📚 *${selectedPDF.title}*
 
 📄 **Description:** ${selectedPDF.description}
 
@@ -712,7 +763,7 @@ _Type "menu" to go back to main menu_`);
 
   } catch (error) {
     console.error('❌ PDF selection error:', error);
-    await message.reply(`Sorry, there was an error accessing the PDF. Please try again or contact support.\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `Sorry, there was an error accessing the PDF. Please try again or contact support.\n\n_Type "menu" to go back to main menu_`);
     userStates.set(phoneNumber, { state: 'premium_menu' });
   }
 }
@@ -731,23 +782,23 @@ async function handleImageChoice(message, user, messageBody, userState) {
       if (imagePath && fs.existsSync(imagePath)) {
         await handleCropDiagnosis(message, user, imagePath, imageUrl);
       } else {
-        await message.reply('Image expired. Please send the image again. 📸\n\n_Type "menu" to go back to main menu_');
+        await safeSendMessage(message, 'Image expired. Please send the image again. 📸\n\n_Type "menu" to go back to main menu_');
         userStates.set(phoneNumber, { state: 'main_menu' });
       }
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
   } else if (input === '2') {
     // Option 2: Verify receipt / show premium status
     if (isPremiumActive(user)) {
-      await message.reply(`✅ You already have premium access!\n\n🎉 Valid until: ${formatDate(user.premium_expiry_date)}\n\n*Premium Features:*\n1️⃣ Crop disease diagnosis and Soil results analysis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive Farming Guides\n4️⃣ Priority support\n\n_Reply with 1-4 to use Premium Features, or type "menu" to go back to main menu._`);
+      await safeSendMessage(message, `✅ You already have premium access!\n\n🎉 Valid until: ${formatDate(user.premium_expiry_date)}\n\n*Premium Features:*\n1️⃣ Crop disease diagnosis and Soil results analysis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive Farming Guides\n4️⃣ Priority support\n\n_Reply with 1-4 to use Premium Features, or type "menu" to go back to main menu._`);
       userStates.set(phoneNumber, { state: 'premium_access_info' });
     } else {
       if (imagePath && fs.existsSync(imagePath)) {
         await handleReceiptVerification(message, user, imagePath, imageUrl);
       } else {
-        await message.reply(`Image expired. Please send the image again. 📸\n\n_Type "menu" to go back to main menu_`);
+        await safeSendMessage(message, `Image expired. Please send the image again. 📸\n\n_Type "menu" to go back to main menu_`);
         userStates.set(phoneNumber, { state: 'main_menu' });
       }
     }
@@ -756,15 +807,15 @@ async function handleImageChoice(message, user, messageBody, userState) {
       if (imagePath && fs.existsSync(imagePath)) {
         await handleSoilAnalysis(message, user, imagePath, imageUrl);
       } else {
-        await message.reply('Image expired. Please send the image again. 📸\n\n_Type "menu" to go back to main menu_');
+        await safeSendMessage(message, 'Image expired. Please send the image again. 📸\n\n_Type "menu" to go back to main menu_');
         userStates.set(phoneNumber, { state: 'main_menu' });
       }
     } else {
-      await message.reply(getPremiumPrompt());
+      await safeSendMessage(message, getPremiumPrompt());
       userStates.set(phoneNumber, { state: 'awaiting_receipt' });
     }
   } else {
-    await message.reply(`Please choose 1, 2 or 3.\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `Please choose 1, 2 or 3.\n\n_Type "menu" to go back to main menu_`);
   }
 }
 
@@ -778,7 +829,7 @@ async function handleMediaMessage(message, user, userState) {
     const media = await message.downloadMedia();
 
     if (!media || !media.mimetype.startsWith('image/')) {
-      await message.reply(`Please send an image file (JPG, PNG, etc.) 📸
+      await safeSendMessage(message, `Please send an image file (JPG, PNG, etc.) 📸
 
 _Type "menu" to go back to main menu_`);
       return;
@@ -818,7 +869,7 @@ _Type "menu" to go back to main menu_`);
       await handleCropDiagnosis(message, user, imagePath, imageUrl);
     }
     else {
-      await message.reply(`I received your image. What would you like me to do with it?
+      await safeSendMessage(message, `I received your image. What would you like me to do with it?
 
 1️⃣ Diagnose crop disease (Premium)
 2️⃣ Verify receipt for premium access
@@ -842,7 +893,7 @@ _Type "menu" to go back to main menu_`);
 
   } catch (error) {
     console.error('❌ Error processing image:', error);
-    await message.reply('Sorry, I had trouble processing that image. Please try again with a clear photo. 📸');
+    await safeSendMessage(message, 'Sorry, I had trouble processing that image. Please try again with a clear photo. 📸');
   }
 }
 
@@ -853,7 +904,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
   const phoneNumber = message.from;
 
   try {
-    await message.reply('📄 Analyzing your receipt... Please wait a moment.');
+    await safeSendMessage(message, '📄 Analyzing your receipt... Please wait a moment.');
 
     // Forward receipt to admin
     try {
@@ -861,7 +912,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
       const media = MessageMedia.fromFilePath(imagePath);
       const caption = `🧾 *New Receipt Submission*\n\n👤 Name: ${user.name || 'Unknown'}\n📱 Phone: ${user.phone_numeric || phoneNumber}\n🆔 ID: ${phoneNumber}`;
 
-      await client.sendMessage(adminNumber, media, { caption: caption });
+      await safeSendMessage(adminNumber, media, { caption: caption });
       console.log(`✅ Receipt forwarded to admin: ${adminNumber}`);
     } catch (forwardError) {
       console.error('❌ Error forwarding receipt:', forwardError);
@@ -873,7 +924,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
 
     // MANDATORY: QR code must be present
     if (!receiptData.qr_url || receiptData.source !== 'qr') {
-      await message.reply(`❌ *QR Code Required*\n\nThis receipt does not have a valid ZIMRA QR code.\n\n*Requirements:*\n✓ Receipt must have ZIMRA QR code\n✓ QR code must be clearly visible\n✓ Receipt must be from authorized retailer\n\nPlease upload a valid fiscal receipt with QR code. 📸`);
+      await safeSendMessage(message, `❌ *QR Code Required*\n\nThis receipt does not have a valid ZIMRA QR code.\n\n*Requirements:*\n✓ Receipt must have ZIMRA QR code\n✓ QR code must be clearly visible\n✓ Receipt must be from authorized retailer\n\nPlease upload a valid fiscal receipt with QR code. 📸`);
 
       // Save as pending
       const pendingHash = generateReceiptHash(
@@ -891,7 +942,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
     // Check if invoice is valid
     if (!receiptData.is_valid) {
       const errors = receiptData.validation_errors.join('\n• ');
-      await message.reply(`⚠️ *Invoice Validation Failed*\n\n*Issues Found:*\n• ${errors}\n\nPlease upload a valid recent receipt. 📅`);
+      await safeSendMessage(message, `⚠️ *Invoice Validation Failed*\n\n*Issues Found:*\n• ${errors}\n\nPlease upload a valid recent receipt. 📅`);
 
       // Save as pending
       const pendingHash = generateReceiptHash(
@@ -915,7 +966,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
       enhancedData.raw_text.toUpperCase().includes('UCF');
 
     if (!hasUCFKeyword) {
-      await message.reply(`⚠️ *No UCF Products Found*\n\nThis receipt does not contain UCF products.\n\n*Please ensure:*\n✓ Receipt shows UCF branded products\n✓ Image is clear and readable\n✓ Receipt is from an authorized retailer\n\nTry again with a valid UCF purchase receipt. 📸`);
+      await safeSendMessage(message, `⚠️ *No UCF Products Found*\n\nThis receipt does not contain UCF products.\n\n*Please ensure:*\n✓ Receipt shows UCF branded products\n✓ Image is clear and readable\n✓ Receipt is from an authorized retailer\n\nTry again with a valid UCF purchase receipt. 📸`);
 
       // Save as pending
       const pendingHash = generateReceiptHash(
@@ -937,7 +988,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
       if (purchaseDate < threeMonthsAgo) {
-        await message.reply(`⚠️ *Receipt Too Old*\n\nThis receipt is older than 3 months.\n\nPlease upload a recent UCF purchase receipt (within last 3 months). 📅`);
+        await safeSendMessage(message, `⚠️ *Receipt Too Old*\n\nThis receipt is older than 3 months.\n\nPlease upload a recent UCF purchase receipt (within last 3 months). 📅`);
 
         // Save as pending
         const pendingHash = generateReceiptHash(
@@ -961,7 +1012,7 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
     );
 
     if (isReceiptUsed(hash)) {
-      await message.reply(`⚠️ *Receipt Already Used*\n\nThis receipt has already been verified.\n\nEach receipt can only be used once. Please upload a different receipt. 🔒`);
+      await safeSendMessage(message, `⚠️ *Receipt Already Used*\n\nThis receipt has already been verified.\n\nEach receipt can only be used once. Please upload a different receipt. 🔒`);
 
       // Save as pending
       const pendingHash = generateReceiptHash(
@@ -995,13 +1046,13 @@ async function handleReceiptVerification(message, user, imagePath, imageUrl) {
 
     // Success message with invoice details
     const productList = enhancedData.ucf_products.map(p => `• ${p}`).join('\n');
-    await message.reply(`✅ *Receipt Verified Successfully!* 🎉\n\n*Invoice Details:*\n📋 Invoice #: ${enhancedData.invoice_number || 'N/A'}\n🏪 Retailer: ${enhancedData.retailer_name || 'N/A'}\n📅 Date: ${enhancedData.purchase_date || 'N/A'}\n💰 Amount: ${enhancedData.currency} ${enhancedData.total_amount || 'N/A'}\n\n*UCF Products Found:*\n${productList}\n\n🎉 *Congratulations!* You now have premium access.\n\n*Valid Until:* ${formatDate(expiryDate)}\n\n*Unlocked Features:*\n🔬 Crop disease diagnosis\n🌱 Soil results analysis\n📄 Exclusive farming guides\n👨‍🌾 Priority expert support\n\n_Type "menu" to start using premium features!_ 🌾`);
+    await safeSendMessage(message, `✅ *Receipt Verified Successfully!* 🎉\n\n*Invoice Details:*\n📋 Invoice #: ${enhancedData.invoice_number || 'N/A'}\n🏪 Retailer: ${enhancedData.retailer_name || 'N/A'}\n📅 Date: ${enhancedData.purchase_date || 'N/A'}\n💰 Amount: ${enhancedData.currency} ${enhancedData.total_amount || 'N/A'}\n\n*UCF Products Found:*\n${productList}\n\n🎉 *Congratulations!* You now have premium access.\n\n*Valid Until:* ${formatDate(expiryDate)}\n\n*Unlocked Features:*\n🔬 Crop disease diagnosis\n🌱 Soil results analysis\n📄 Exclusive farming guides\n👨‍🌾 Priority expert support\n\n_Type "menu" to start using premium features!_ 🌾`);
 
     userStates.set(phoneNumber, { state: 'main_menu' });
 
   } catch (error) {
     console.error('❌ Receipt verification error:', error);
-    await message.reply(`⚠️ *Verification Error*\n\nI had trouble reading your receipt. Please ensure:\n\n✓ Image is clear and well-lit\n✓ All text is visible\n✓ Receipt is not blurry\n\nTry taking another photo and send it again. 📸`);
+    await safeSendMessage(message, `⚠️ *Verification Error*\n\nI had trouble reading your receipt. Please ensure:\n\n✓ Image is clear and well-lit\n✓ All text is visible\n✓ Receipt is not blurry\n\nTry taking another photo and send it again. 📸`);
   }
 }
 
@@ -1012,7 +1063,7 @@ async function handleCropDiagnosis(message, user, imagePath, imageUrl) {
   const phoneNumber = message.from;
 
   try {
-    await message.reply('🔬 Analyzing your crop image... This may take a moment.');
+    await safeSendMessage(message, '🔬 Analyzing your crop image... This may take a moment.');
 
     // Analyze agricultural image using GPT-4 Vision
     const result = await processPlantImage(imagePath, 'crop');
@@ -1020,12 +1071,12 @@ async function handleCropDiagnosis(message, user, imagePath, imageUrl) {
 
     // Send the structured diagnosis message produced by the vision model
     if (result.fullAnalysis) {
-      await message.reply(result.fullAnalysis);
+      await safeSendMessage(message, result.fullAnalysis);
     } else {
       // Fallback (should rarely happen with the new template)
       const diseaseName = result.disease;
       const confidence = (result.confidence * 100).toFixed(1);
-      await message.reply(`🌾 UCF Crop Diagnosis\n\nIDENTIFICATION:\nIssue Detected: ${diseaseName}\nAI Confidence: ${confidence}%\n\nFor a more detailed report, please send a clearer image or type "Expert" to contact an agronomist.`);
+      await safeSendMessage(message, `🌾 UCF Crop Diagnosis\n\nIDENTIFICATION:\nIssue Detected: ${diseaseName}\nAI Confidence: ${confidence}%\n\nFor a more detailed report, please send a clearer image or type "Expert" to contact an agronomist.`);
     }
 
     // Save crop diagnosis record with image URL
@@ -1043,7 +1094,7 @@ async function handleCropDiagnosis(message, user, imagePath, imageUrl) {
 
   } catch (error) {
     console.error('❌ Crop diagnosis error:', error);
-    await message.reply(`⚠️ I had trouble analyzing that image.\n\nPlease send:\n✓ Clear photo of affected leaves\n✓ Good lighting\n✓ Close-up of symptoms\n\nTry again or type "expert" for human assistance. 👨‍🌾`);
+    await safeSendMessage(message, `⚠️ I had trouble analyzing that image.\n\nPlease send:\n✓ Clear photo of affected leaves\n✓ Good lighting\n✓ Close-up of symptoms\n\nTry again or type "expert" for human assistance. 👨‍🌾`);
   }
 }
 
@@ -1051,17 +1102,17 @@ async function handleSoilAnalysis(message, user, imagePath, imageUrl) {
   const phoneNumber = message.from;
 
   try {
-    await message.reply('🧪 Analyzing your soil results image... This may take a moment.');
+    await safeSendMessage(message, '🧪 Analyzing your soil results image... This may take a moment.');
 
     const result = await processPlantImage(imagePath, 'soil');
     console.log('🌱 Soil results analysis:', result);
 
     if (result.fullAnalysis) {
-      await message.reply(result.fullAnalysis);
+      await safeSendMessage(message, result.fullAnalysis);
     } else {
       const issueName = result.disease;
       const confidence = (result.confidence * 100).toFixed(1);
-      await message.reply(`🌱 UCF Soil Results Analysis\n\nIDENTIFICATION:\nIssue Detected: ${issueName}\nAI Confidence: ${confidence}%\n\nFor a more detailed report, please send a clearer image or type "Expert" to contact an agronomist.`);
+      await safeSendMessage(message, `🌱 UCF Soil Results Analysis\n\nIDENTIFICATION:\nIssue Detected: ${issueName}\nAI Confidence: ${confidence}%\n\nFor a more detailed report, please send a clearer image or type "Expert" to contact an agronomist.`);
     }
 
     // Save soil analysis record with image URL
@@ -1079,7 +1130,7 @@ async function handleSoilAnalysis(message, user, imagePath, imageUrl) {
 
   } catch (error) {
     console.error('❌ Soil resultsanalysis error:', error);
-    await message.reply(`⚠️ I had trouble analyzing that soil results image.\n\nPlease send:\n✓ Clear photo of the soil or lab report\n✓ Good lighting\n\nTry again or type "expert" for human assistance. 👨‍🌾`);
+    await safeSendMessage(message, `⚠️ I had trouble analyzing that soil results image.\n\nPlease send:\n✓ Clear photo of the soil or lab report\n✓ Good lighting\n\nTry again or type "expert" for human assistance. 👨‍🌾`);
   }
 }
 
@@ -1093,7 +1144,7 @@ async function handleLocation(message, user) {
     const { latitude, longitude } = message.location;
     console.log(`📍 Location received: ${latitude}, ${longitude}`);
 
-    await message.reply('🔍 Finding nearest UCF retailers...');
+    await safeSendMessage(message, '🔍 Finding nearest UCF retailers...');
 
     // Find nearest shops
     const shops = await findNearestShops(latitude, longitude, 3);
@@ -1105,14 +1156,14 @@ async function handleLocation(message, user) {
 
     // Send shop information
     const shopsMessage = formatShopsMessage(shops, true);
-    await message.reply(shopsMessage);
+    await safeSendMessage(message, shopsMessage);
 
-    await message.reply('_Need anything else? Type "menu" to see all options._');
+    await safeSendMessage(message, '_Need anything else? Type "menu" to see all options._');
     userStates.set(phoneNumber, { state: 'main_menu' });
 
   } catch (error) {
     console.error('❌ Location handling error:', error);
-    await message.reply('Sorry, I had trouble finding shops near you. Please try again or contact us directly. 📞');
+    await safeSendMessage(message, 'Sorry, I had trouble finding shops near you. Please try again or contact us directly. 📞');
   }
 }
 
@@ -1123,7 +1174,7 @@ async function handleProductQuestion(message, user, messageBody) {
   const phoneNumber = message.from;
 
   if (messageBody.toLowerCase() === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     userStates.set(phoneNumber, { state: 'main_menu' });
     return;
   }
@@ -1133,7 +1184,7 @@ async function handleProductQuestion(message, user, messageBody) {
   const productsOnlyRegex = /^\s*(ucf\s*)?products\s*$/i;
   if (showProductsRegex.test(messageBody) || productsOnlyRegex.test(messageBody)) {
     const products = loadData('products.json');
-    await message.reply(formatProductList(products) + '\n_Ask another question or type "menu" to go back._');
+    await safeSendMessage(message, formatProductList(products) + '\n_Ask another question or type "menu" to go back._');
     return;
   }
 
@@ -1145,17 +1196,17 @@ async function handleProductQuestion(message, user, messageBody) {
     if (matchingProducts.length > 0) {
       // Found matching products
       if (matchingProducts.length === 1) {
-        await message.reply(formatProduct(matchingProducts[0]));
+        await safeSendMessage(message, formatProduct(matchingProducts[0]));
       } else {
-        await message.reply(formatProductList(matchingProducts));
+        await safeSendMessage(message, formatProductList(matchingProducts));
       }
     } else {
       // Use GPT for general questions
       const answer = await answerProductQuestion(messageBody, products);
-      await message.reply(answer);
+      await safeSendMessage(message, answer);
     }
 
-    await message.reply('\n_Ask another question or type "menu" to go back._');
+    await safeSendMessage(message, '\n_Ask another question or type "menu" to go back._');
 
   } catch (error) {
     console.error('❌ Product question error:', error);
@@ -1167,10 +1218,10 @@ async function handleProductQuestion(message, user, messageBody) {
       }).join(', ');
       const context = `Available UCF products: ${names}`;
       const fallback = await getGPTResponse(`Answer this UCF product question: ${messageBody}`, context);
-      await message.reply(fallback + '\n\n_Ask another question or type "menu" to go back._');
+      await safeSendMessage(message, fallback + '\n\n_Ask another question or type "menu" to go back._');
     } catch (e2) {
       const products = loadData('products.json');
-      await message.reply(formatProductList(products) + '\n_Ask another question or type "menu" to go back._');
+      await safeSendMessage(message, formatProductList(products) + '\n_Ask another question or type "menu" to go back._');
     }
   }
 }
@@ -1182,7 +1233,7 @@ async function handleExpertEmailInput(message, user, messageBody) {
   const phoneNumber = message.from;
 
   updateUser(phoneNumber, { email: messageBody });
-  await message.reply(`Great! Now please describe your farming issue or question.
+  await safeSendMessage(message, `Great! Now please describe your farming issue or question.
 
 Your question will be forwarded directly to our agronomist's WhatsApp for personalized assistance.`);
   userStates.set(phoneNumber, { state: 'awaiting_expert_issue' });
@@ -1210,20 +1261,20 @@ async function handleExpertIssueInput(message, user, messageBody) {
     saveData('argonomist.json', questions);
 
     try {
-      await client.sendMessage(chatId, expertMessage);
+      await safeSendMessage(chatId, expertMessage);
       console.log(`✅ Expert request forwarded to ${agronomistNumber}`);
 
-      await message.reply(`✅ *Request Sent!* 👨‍🌾\n\nI've forwarded your question to our agronomist.\n\n*Your Question:*\n"${messageBody}"\n\nYou'll receive a response directly on WhatsApp soon!\n\n_Type "menu" to continue._`);
+      await safeSendMessage(message, `✅ *Request Sent!* 👨‍🌾\n\nI've forwarded your question to our agronomist.\n\n*Your Question:*\n"${messageBody}"\n\nYou'll receive a response directly on WhatsApp soon!\n\n_Type "menu" to continue._`);
     } catch (sendError) {
       // If sending fails, still show fallback message
-      await message.reply(`✅ *Request Recorded!*\n\nYour query has been recorded and will be forwarded to our agronomist.\n\n*Your Details Recorded:*\n📞 Phone: ${phoneNumber}\n📧 Email: ${user.email || 'Not provided'}\n\n_Type "menu" to continue._`);
+      await safeSendMessage(message, `✅ *Request Recorded!*\n\nYour query has been recorded and will be forwarded to our agronomist.\n\n*Your Details Recorded:*\n📞 Phone: ${phoneNumber}\n📧 Email: ${user.email || 'Not provided'}\n\n_Type "menu" to continue._`);
     }
 
     userStates.set(phoneNumber, { state: 'main_menu' });
 
   } catch (error) {
     console.error('❌ Expert help error:', error);
-    await message.reply(`Sorry, there was an error forwarding your message to our agronomist. Please try again or type "menu" to return to main menu.`);
+    await safeSendMessage(message, `Sorry, there was an error forwarding your message to our agronomist. Please try again or type "menu" to return to main menu.`);
   }
 }
 
@@ -1235,7 +1286,7 @@ async function handleCalculatorPlant(message, user, messageBody) {
   const phoneNumber = message.from;
 
   if (messageBody.toLowerCase() === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     userStates.set(phoneNumber, { state: 'main_menu' });
     return;
   }
@@ -1243,12 +1294,12 @@ async function handleCalculatorPlant(message, user, messageBody) {
   const plantType = messageBody.trim();
 
   if (!plantType) {
-    await message.reply(`❌ Please enter a valid crop name.\n\nExample: "Maize", "Cotton", "Cabbage"\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `❌ Please enter a valid crop name.\n\nExample: "Maize", "Cotton", "Cabbage"\n\n_Type "menu" to go back to main menu_`);
     return;
   }
 
   // Save plant type and move to yield input
-  await message.reply(`✅ Plant selected: *${plantType}*\n\n📊 *Step 2: Target Yield*\n\nHow many tonnes of ${plantType} are you looking to get?\n\nExample: "3" for 3 tonnes\n\n_Type "menu" to go back to main menu_`);
+  await safeSendMessage(message, `✅ Plant selected: *${plantType}*\n\n📊 *Step 2: Target Yield*\n\nHow many tonnes of ${plantType} are you looking to get?\n\nExample: "3" for 3 tonnes\n\n_Type "menu" to go back to main menu_`);
 
   userStates.set(phoneNumber, {
     state: 'calculator_yield',
@@ -1271,7 +1322,7 @@ async function handleCalculatorYield(message, user, messageBody, userState) {
   const phoneNumber = message.from;
 
   if (messageBody.toLowerCase() === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     userStates.set(phoneNumber, { state: 'main_menu' });
     return;
   }
@@ -1279,7 +1330,7 @@ async function handleCalculatorYield(message, user, messageBody, userState) {
   const targetYield = parseFloat(messageBody.trim());
 
   if (isNaN(targetYield) || targetYield <= 0) {
-    await message.reply(`❌ Please enter a valid yield amount.\n\nExample: "3.5" for 3.5 tonnes\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `❌ Please enter a valid yield amount.\n\nExample: "3.5" for 3.5 tonnes\n\n_Type "menu" to go back to main menu_`);
     return;
   }
 
@@ -1297,19 +1348,19 @@ async function handleCalculatorYield(message, user, messageBody, userState) {
   // Step 3: Categorize based on yield
   if (targetYield <= 2) {
     // Low yield: 150kg/ha recommendation
-    await message.reply(`📊 *UCF Fertilizer Calculator Results*\n\n🌾 *Crop:* ${plantType}\n🎯 *Target Yield:* ${targetYield} tonnes\n\n✅ *Recommended Rate:* 150kg/ha\n\n💡 This application rate is suitable for your target yield.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu.`);
+    await safeSendMessage(message, `📊 *UCF Fertilizer Calculator Results*\n\n🌾 *Crop:* ${plantType}\n🎯 *Target Yield:* ${targetYield} tonnes\n\n✅ *Recommended Rate:* 150kg/ha\n\n💡 This application rate is suitable for your target yield.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu.`);
 
     userStates.set(phoneNumber, { state: 'main_menu' });
 
   } else if (targetYield > 2 && targetYield <= 5) {
     // Medium yield: 300kg/ha + soil analysis suggestion
-    await message.reply(`📊 *UCF Fertilizer Calculator Results*\n\n🌾 *Crop:* ${plantType}\n🎯 *Target Yield:* ${targetYield} tonnes\n\n✅ *Recommended Rate:* 300kg/ha\n\n💡 *Pro Tip:* We recommend soil analysis to maximise performance of UCF fertilizer for your target yield.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu.`);
+    await safeSendMessage(message, `📊 *UCF Fertilizer Calculator Results*\n\n🌾 *Crop:* ${plantType}\n🎯 *Target Yield:* ${targetYield} tonnes\n\n✅ *Recommended Rate:* 300kg/ha\n\n💡 *Pro Tip:* We recommend soil analysis to maximise performance of UCF fertilizer for your target yield.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu.`);
 
     userStates.set(phoneNumber, { state: 'main_menu' });
 
   } else {
     // High yield (>5): Ask about soil analysis
-    await message.reply(`📊 *UCF Fertilizer Calculator*\n\n🌾 *Crop:* ${plantType}\n🎯 *Target Yield:* ${targetYield} tonnes\n\n🧪 *Soil Analysis Check*\n\nDid you do a soil analysis?\n\n1️⃣ Yes - I have soil analysis results\n2️⃣ No - I haven't done soil analysis\n\nReply with 1 or 2.\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `📊 *UCF Fertilizer Calculator*\n\n🌾 *Crop:* ${plantType}\n🎯 *Target Yield:* ${targetYield} tonnes\n\n🧪 *Soil Analysis Check*\n\nDid you do a soil analysis?\n\n1️⃣ Yes - I have soil analysis results\n2️⃣ No - I haven't done soil analysis\n\nReply with 1 or 2.\n\n_Type "menu" to go back to main menu_`);
 
     userStates.set(phoneNumber, {
       state: 'calculator_soil_check',
@@ -1326,7 +1377,7 @@ async function handleCalculatorSoilCheck(message, user, messageBody, userState) 
   const phoneNumber = message.from;
 
   if (messageBody.toLowerCase() === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     userStates.set(phoneNumber, { state: 'main_menu' });
     return;
   }
@@ -1337,7 +1388,7 @@ async function handleCalculatorSoilCheck(message, user, messageBody, userState) 
 
   if (input === '1' || input === 'yes') {
     // User has soil analysis results
-    await message.reply(`✅ *Great!*\n\nPlease share your soil analysis results so our agronomist can give you personalized recommendations based on your soil.\n\n📸 You can send:\n• Photo of lab report\n• Soil analysis document\n\nOur expert will review and provide tailored fertilizer recommendations.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu.`);
+    await safeSendMessage(message, `✅ *Great!*\n\nPlease share your soil analysis results so our agronomist can give you personalized recommendations based on your soil.\n\n📸 You can send:\n• Photo of lab report\n• Soil analysis document\n\nOur expert will review and provide tailored fertilizer recommendations.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu.`);
 
     // Update user record
     updateUser(phoneNumber, {
@@ -1353,7 +1404,7 @@ async function handleCalculatorSoilCheck(message, user, messageBody, userState) 
 
   } else if (input === '2' || input === 'no') {
     // User hasn't done soil analysis
-    await message.reply(`💡 *Soil Analysis Recommended*\n\nFor your target yield of ${targetYield} tonnes, we highly recommend soil analysis to maximise performance of UCF fertilizer.\n\n👨‍🌾 *Next Steps:*\nContact our expert agronomist for soil sampling and analysis services.\n\nThis will help us provide you with the most accurate fertilizer recommendations for optimal results.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu or "4" to contact our expert.`);
+    await safeSendMessage(message, `💡 *Soil Analysis Recommended*\n\nFor your target yield of ${targetYield} tonnes, we highly recommend soil analysis to maximise performance of UCF fertilizer.\n\n👨‍🌾 *Next Steps:*\nContact our expert agronomist for soil sampling and analysis services.\n\nThis will help us provide you with the most accurate fertilizer recommendations for optimal results.\n\n_Thank you for using the UCF Fertilizer Calculator!_\n\nType "menu" to return to main menu or "4" to contact our expert.`);
 
     // Update user record
     updateUser(phoneNumber, {
@@ -1368,7 +1419,7 @@ async function handleCalculatorSoilCheck(message, user, messageBody, userState) 
     userStates.set(phoneNumber, { state: 'main_menu' });
 
   } else {
-    await message.reply(`❌ Please reply with:\n\n1️⃣ for Yes\n2️⃣ for No\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `❌ Please reply with:\n\n1️⃣ for Yes\n2️⃣ for No\n\n_Type "menu" to go back to main menu_`);
   }
 }
 
@@ -1380,19 +1431,19 @@ async function handleFertilizerCrop(message, user, messageBody) {
 
 async function handleFertilizerFieldSize(message, user, messageBody, userState) {
   const phoneNumber = message.from;
-  await message.reply(`ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
+  await safeSendMessage(message, `ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
   userStates.set(phoneNumber, { state: 'main_menu' });
 }
 
 async function handleFertilizerNPKRequirement(message, user, messageBody, userState) {
   const phoneNumber = message.from;
-  await message.reply(`ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
+  await safeSendMessage(message, `ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
   userStates.set(phoneNumber, { state: 'main_menu' });
 }
 
 async function handleFertilizerProductSelection(message, user, messageBody, userState) {
   const phoneNumber = message.from;
-  await message.reply(`ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
+  await safeSendMessage(message, `ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
   userStates.set(phoneNumber, { state: 'main_menu' });
 }
 
@@ -1401,7 +1452,7 @@ async function handleFertilizerProductSelection(message, user, messageBody, user
  */
 async function handleFertilizerCustomNPK(message, user, messageBody, userState) {
   const phoneNumber = message.from;
-  await message.reply(`ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
+  await safeSendMessage(message, `ℹ️ The fertilizer calculator has been updated!\n\nPlease start again by typing "2" or "fertilizer" from the main menu.\n\n_Type "menu" to go back to main menu_`);
   userStates.set(phoneNumber, { state: 'main_menu' });
 }
 
@@ -1413,21 +1464,21 @@ async function handlePremiumAccessInfo(message, user, messageBody) {
   const input = messageBody.toLowerCase().trim();
 
   if (input === 'menu') {
-    await message.reply(getMainMenu(user.name));
+    await safeSendMessage(message, getMainMenu(user.name));
     userStates.set(phoneNumber, { state: 'main_menu' });
     return;
   }
 
   // 1: Crop/Soil Diagnosis
   if (input === '1' || input.includes('diagnosis') || input.includes('crop') || input.includes('soil')) {
-    await message.reply(`🔬 *Crop & Soil Diagnosis Service*\n\nPlease send a clear photo of either:\n📸 Affected crop/plant leaves\n📸 Soil results / soil condition\n\nI'll analyze it and provide recommendations! 🌿\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `🔬 *Crop & Soil Diagnosis Service*\n\nPlease send a clear photo of either:\n📸 Affected crop/plant leaves\n📸 Soil results / soil condition\n\nI'll analyze it and provide recommendations! 🌿\n\n_Type "menu" to go back to main menu_`);
     userStates.set(phoneNumber, { state: 'awaiting_crop_image' });
     return;
   }
 
   // 2: Fertilizer Calculator
   if (input === '2' || input.includes('calculator') || input.includes('fertilizer')) {
-    await message.reply(getFertilizerCalculatorPrompt());
+    await safeSendMessage(message, getFertilizerCalculatorPrompt());
     userStates.set(phoneNumber, { state: 'fertilizer_crop' });
     return;
   }
@@ -1435,7 +1486,7 @@ async function handlePremiumAccessInfo(message, user, messageBody) {
   // 3: Exclusive PDFs
   if (input === '3' || input.includes('pdf') || input.includes('guide')) {
     const pdfs = getExclusivePDFs();
-    await message.reply(`📚 *Exclusive Premium PDFs*\n\nChoose a guide to download:\n\n${formatPDFList(pdfs)}\n\nReply with the number (1-${pdfs.length}) to get your PDF!\n\n_Type "menu" to go back to main menu_`);
+    await safeSendMessage(message, `📚 *Exclusive Premium PDFs*\n\nChoose a guide to download:\n\n${formatPDFList(pdfs)}\n\nReply with the number (1-${pdfs.length}) to get your PDF!\n\n_Type "menu" to go back to main menu_`);
     userStates.set(phoneNumber, { state: 'awaiting_pdf_selection' });
     return;
   }
@@ -1443,19 +1494,19 @@ async function handlePremiumAccessInfo(message, user, messageBody) {
   // 4: Priority support (expert help)
   if (input === '4' || input.includes('support') || input.includes('expert')) {
     if (!user.name) {
-      await message.reply(`To connect you with our expert, I need some information.\n\nWhat's your name?\n\n_Type "menu" to go back to main menu_`);
+      await safeSendMessage(message, `To connect you with our expert, I need some information.\n\nWhat's your name?\n\n_Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_expert_name' });
     } else if (!user.email) {
-      await message.reply(`Thanks! What's your email address?\n\n_Type "menu" to go back to main menu_`);
+      await safeSendMessage(message, `Thanks! What's your email address?\n\n_Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_expert_email' });
     } else {
-      await message.reply(`👨‍🌾 *Priority Expert Support*\n\nPlease describe your farming issue or question.\n\nYour question will be forwarded directly to our agronomist's WhatsApp for personalized assistance.\n\n_Type "menu" to go back to main menu_`);
+      await safeSendMessage(message, `👨‍🌾 *Priority Expert Support*\n\nPlease describe your farming issue or question.\n\nYour question will be forwarded directly to our agronomist's WhatsApp for personalized assistance.\n\n_Type "menu" to go back to main menu_`);
       userStates.set(phoneNumber, { state: 'awaiting_expert_issue' });
     }
     return;
   }
 
-  await message.reply(`*Premium Features:*\n1️⃣ Crop disease diagnosis and Soil results analysis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive PDFs\n4️⃣ Priority support\n\n_Reply with 1-4 to use Premium Features, or type "menu" to go back to main menu._`);
+  await safeSendMessage(message, `*Premium Features:*\n1️⃣ Crop disease diagnosis and Soil results analysis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive PDFs\n4️⃣ Priority support\n\n_Reply with 1-4 to use Premium Features, or type "menu" to go back to main menu._`);
 }
 
 /**
@@ -1468,16 +1519,16 @@ async function handleGeneralQuery(message, user, messageBody) {
     const productsOnlyRegex = /^\s*(ucf\s*)?products\s*$/i;
     if (showProductsRegex.test(messageBody) || productsOnlyRegex.test(messageBody)) {
       const products = loadData('products.json');
-      await message.reply(formatProductList(products) + '\n\n_Type "menu" for more options._');
+      await safeSendMessage(message, formatProductList(products) + '\n\n_Type "menu" for more options._');
       userStates.set(message.from, { state: 'product_qa' });
       return;
     }
     const context = `User is ${user.name || 'a farmer'}. Premium status: ${isPremiumActive(user) ? 'Active' : 'Inactive'}`;
     const response = await getGPTResponse(messageBody, context);
-    await message.reply(response + '\n\n_Type "menu" for more options._');
+    await safeSendMessage(message, response + '\n\n_Type "menu" for more options._');
   } catch (error) {
     console.error('❌ General query error:', error);
-    await message.reply('I didn\'t quite understand that. Type "menu" to see what I can help you with! 🌾');
+    await safeSendMessage(message, 'I didn\'t quite understand that. Type "menu" to see what I can help you with! 🌾');
   }
 }
 
