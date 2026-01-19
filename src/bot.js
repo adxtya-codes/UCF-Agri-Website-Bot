@@ -297,6 +297,33 @@ client.on('disconnected', (reason) => {
 
 // Main message handler
 client.on('message', async (message) => {
+  // Wrap message.reply with retry logic
+  const originalReply = message.reply.bind(message);
+  message.reply = async function (content, options) {
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await originalReply(content, options);
+      } catch (error) {
+        const isLastAttempt = attempt === maxRetries;
+        const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+
+        if (error.message && (
+          error.message.includes('markedUnread') ||
+          error.message.includes('Protocol error') ||
+          error.message.includes('Execution context was destroyed')
+        )) {
+          if (!isLastAttempt) {
+            console.log(`⚠️ Retry ${attempt}/${maxRetries} after ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+  };
+
   try {
     const phoneNumber = message.from;
     const messageBody = message.body.trim();
