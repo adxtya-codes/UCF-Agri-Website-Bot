@@ -22,8 +22,12 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies (this will run postinstall script with patch-package)
+RUN echo "=== Installing dependencies ===" && \
+    npm install && \
+    echo "=== Verifying patch was applied ===" && \
+    grep -A 5 "try {" /app/node_modules/whatsapp-web.js/src/Client.js | grep -q "sendSeen" && \
+    echo "✅ Patch successfully applied!" || echo "❌ Patch NOT applied!"
 
 # Copy application files
 COPY . .
