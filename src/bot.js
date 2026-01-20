@@ -40,6 +40,49 @@ const {
   formatCropFertilizerPlan
 } = require('./helpers/utils');
 
+/**
+ * Clear WhatsApp cache and authentication directories
+ * Used when cache becomes corrupted or outdated
+ */
+function clearWhatsAppCache() {
+  console.log('🧹 Clearing WhatsApp cache and authentication...');
+
+  const authPath = path.join(__dirname, '../.wwebjs_auth');
+  const cachePath = path.join(__dirname, '../.wwebjs_cache');
+
+  let cleared = false;
+
+  // Clear auth directory
+  if (fs.existsSync(authPath)) {
+    try {
+      fs.rmSync(authPath, { recursive: true, force: true });
+      console.log('✅ Cleared authentication directory:', authPath);
+      cleared = true;
+    } catch (error) {
+      console.error('❌ Error clearing auth directory:', error.message);
+    }
+  }
+
+  // Clear cache directory
+  if (fs.existsSync(cachePath)) {
+    try {
+      fs.rmSync(cachePath, { recursive: true, force: true });
+      console.log('✅ Cleared cache directory:', cachePath);
+      cleared = true;
+    } catch (error) {
+      console.error('❌ Error clearing cache directory:', error.message);
+    }
+  }
+
+  if (cleared) {
+    console.log('✅ Cache cleanup completed successfully');
+  } else {
+    console.log('ℹ️ No cache directories found to clear');
+  }
+
+  return cleared;
+}
+
 // Initialize WhatsApp client
 const client = new Client({
   authStrategy: new LocalAuth({
@@ -47,9 +90,62 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu'
+    ]
   }
 });
+
+/**
+ * Initialize WhatsApp client with automatic cache error recovery
+ * Detects cache-related errors and automatically clears cache and retries
+ */
+async function initializeClient(retryCount = 0) {
+  const MAX_RETRIES = 2;
+
+  try {
+    console.log('🚀 Initializing WhatsApp client...');
+    await client.initialize();
+  } catch (error) {
+    console.error('❌ Client initialization error:', error.message);
+
+    // Check if this is a cache-related error
+    const isCacheError =
+      error.message.includes('Cannot read properties of null') ||
+      error.message.includes('manifest-') ||
+      error.message.includes('LocalWebCache') ||
+      error.message.includes('indexHtml.match');
+
+    if (isCacheError && retryCount < MAX_RETRIES) {
+      console.log(`⚠️ Cache error detected (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      console.log('🔄 Attempting automatic recovery...');
+
+      // Clear the cache
+      clearWhatsAppCache();
+
+      // Wait a bit before retrying
+      console.log('⏳ Waiting 3 seconds before retry...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Retry initialization
+      console.log('🔄 Retrying client initialization...');
+      return initializeClient(retryCount + 1);
+    } else {
+      // Non-cache error or max retries reached
+      if (retryCount >= MAX_RETRIES) {
+        console.error(`❌ Failed to initialize after ${MAX_RETRIES} attempts`);
+        console.log('💡 Tip: Try manually deleting .wwebjs_auth and .wwebjs_cache folders');
+      }
+      throw error;
+    }
+  }
+}
 
 /**
  * Safe message sending with retry logic
@@ -58,16 +154,24 @@ const client = new Client({
 async function safeSendMessage(target, content, options = {}, retries = 3) {
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // CRITICAL: Ensure content is always a string
+  // WhatsApp Web internally calls .replace() on messages
+  // If content is not a string, it will throw "t.replace is not a function"
+  const safeContent = typeof content === 'string'
+    ? content
+    : (content === null || content === undefined)
+      ? ''
+      : JSON.stringify(content);
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       let result;
 
-      // Check if target is a message object (has reply method) or a chat ID
-      if (typeof target === 'object' && target.reply) {
-        result = await target.reply(content, options);
-      } else {
-        result = await client.sendMessage(target, content, options);
-      }
+      // IMPORTANT: Always use client.sendMessage instead of message.reply()
+      // message.reply() doesn't work with WhatsApp channels (@lid)
+      // Extract chatId from target (either a message object or a chat ID string)
+      const chatId = typeof target === 'string' ? target : target.from;
+      result = await client.sendMessage(chatId, safeContent, options);
 
       // Success
       if (attempt > 1) {
@@ -222,9 +326,15 @@ client.on('ready', async () => {
   }
 });
 
+// Track authentication to prevent duplicate logs
+let isAuthenticated = false;
+
 // Handle authentication
 client.on('authenticated', () => {
-  console.log('🔐 Authentication successful!');
+  if (!isAuthenticated) {
+    console.log('🔐 Authentication successful!');
+    isAuthenticated = true;
+  }
 });
 
 client.on('auth_failure', (msg) => {
@@ -328,6 +438,12 @@ client.on('message', async (message) => {
     const phoneNumber = message.from;
     const messageBody = message.body.trim();
     const hasMedia = message.hasMedia;
+
+    // Ignore status broadcasts
+    if (phoneNumber === 'status@broadcast') {
+      console.log('📢 Ignoring status broadcast message');
+      return;
+    }
 
     console.log(`\n📨 Message from ${phoneNumber}: ${messageBody.substring(0, 50)}...`);
 
@@ -1587,9 +1703,59 @@ client.on('change_state', (state) => {
   console.log('🔄 Connection state changed:', state);
 });
 
+// Handle unhandled promise rejections (catches initialization errors)
+// MUST be set up BEFORE client initialization
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('❌ Reason:', reason);
+
+  // Check if this is a cache-related error
+  const errorMessage = reason?.message || String(reason);
+  const isCacheError =
+    errorMessage.includes('Cannot read properties of null') ||
+    errorMessage.includes('manifest-') ||
+    errorMessage.includes('LocalWebCache') ||
+    errorMessage.includes('indexHtml.match');
+
+  if (isCacheError) {
+    console.log('⚠️ Cache error detected in unhandled rejection');
+    console.log('🧹 Attempting to clear cache...');
+    clearWhatsAppCache();
+    console.log('🔄 Please restart the bot to regenerate cache');
+  }
+
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+// MUST be set up BEFORE client initialization
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+
+  // Check if this is a cache-related error
+  const isCacheError =
+    error.message.includes('Cannot read properties of null') ||
+    error.message.includes('manifest-') ||
+    error.message.includes('LocalWebCache') ||
+    error.message.includes('indexHtml.match');
+
+  if (isCacheError) {
+    console.log('⚠️ Cache error detected in uncaught exception');
+    console.log('🧹 Attempting to clear cache...');
+    clearWhatsAppCache();
+    console.log('🔄 Please restart the bot to regenerate cache');
+  }
+
+  process.exit(1);
+});
+
 // Initialize the client
 console.log('🚀 Starting UCF Agri-Bot...');
-client.initialize();
+initializeClient().catch((error) => {
+  console.error('❌ Fatal error during initialization:', error);
+  console.log('💡 The bot will exit. Please check the error above and restart.');
+  process.exit(1);
+});
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal) {
@@ -1616,3 +1782,4 @@ async function gracefulShutdown(signal) {
 // Handle process termination signals
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
