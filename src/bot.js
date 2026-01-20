@@ -148,61 +148,45 @@ async function initializeClient(retryCount = 0) {
 }
 
 /**
- * Safe message sending with retry logic
- * Handles common errors like markedUnread and implements exponential backoff
+ * Safely send a WhatsApp message with retry logic
+ * @param {string|object} chatId - Chat ID string or message object with .from property
+ * @param {string} content - Message content (must be string)
+ * @param {object} options - Additional options for sending
  */
-async function safeSendMessage(target, content, options = {}, retries = 3) {
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+async function safeSendMessage(chatId, content, options = {}) {
+  const maxRetries = 3;
+  let lastError;
 
-  // CRITICAL: Ensure content is always a string
-  // WhatsApp Web internally calls .replace() on messages
-  // If content is not a string, it will throw "t.replace is not a function"
-  const safeContent = typeof content === 'string'
-    ? content
-    : (content === null || content === undefined)
-      ? ''
-      : JSON.stringify(content);
+  // Extract chat ID if a message object was passed
+  const targetChatId = typeof chatId === 'string' ? chatId : chatId.from;
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
+  // CRITICAL: Disable sendSeen for @lid (linked devices/business accounts)
+  // These chat types don't support the markedUnread API and will throw errors
+  const isLidChat = targetChatId.includes('@lid') || targetChatId.includes('@newsletter');
+  const sendOptions = {
+    ...options,
+    sendSeen: isLidChat ? false : (options.sendSeen !== false) // Disable for @lid, default true for others
+  };
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      let result;
-
-      // IMPORTANT: Always use client.sendMessage instead of message.reply()
-      // message.reply() doesn't work with WhatsApp channels (@lid)
-      // Extract chatId from target (either a message object or a chat ID string)
-      const chatId = typeof target === 'string' ? target : target.from;
-      result = await client.sendMessage(chatId, safeContent, options);
-
-      // Success
       if (attempt > 1) {
-        console.log(`✅ Message sent successfully on attempt ${attempt}`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
       }
-      return result;
+      return await client.sendMessage(targetChatId, content, sendOptions);
 
     } catch (error) {
-      const isLastAttempt = attempt === retries;
-      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+      lastError = error;
+      console.error(`❌ Message send error (attempt ${attempt}/${maxRetries}):`, error.message);
 
-      console.error(`❌ Message send error (attempt ${attempt}/${retries}):`, error.message);
-
-      // Handle specific errors
-      if (error.message && error.message.includes('markedUnread')) {
-        console.log(`⚠️ markedUnread error detected, retrying in ${waitTime}ms...`);
-      } else if (error.message && error.message.includes('Protocol error')) {
-        console.log(`⚠️ Protocol error detected, retrying in ${waitTime}ms...`);
-      } else if (error.message && error.message.includes('Execution context was destroyed')) {
-        console.log(`⚠️ Context destroyed, retrying in ${waitTime}ms...`);
+      if (attempt < maxRetries) {
+        console.log(`Retrying... (${attempt + 1}/${maxRetries})`);
+        continue;
       }
-
-      if (isLastAttempt) {
-        console.error(`❌ Failed to send message after ${retries} attempts`);
-        throw error;
-      }
-
-      // Wait before retry with exponential backoff
-      await delay(waitTime);
     }
   }
+  console.error('❌ All send attempts failed. Last error:', lastError);
+  throw lastError;
 }
 
 // Track user states with timestamps for cleanup
