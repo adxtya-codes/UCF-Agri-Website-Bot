@@ -36,33 +36,57 @@ async function sendDailyTips() {
     }
 
     // Get today's date in Zimbabwe time (YYYY-MM-DD)
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Harare' });
-    console.log(`📅 Checking for tips scheduled for: ${today}`);
+    const now = new Date();
+    const today = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Harare' });
+    console.log(`📅 Checking for tips scheduled for: ${today} (Server time: ${now.toISOString()})`);
 
     // Filter tips scheduled for today
     const todaysTips = tips.filter(tip => tip.send_date === today);
 
     if (todaysTips.length === 0) {
       console.log('ℹ️ No tips scheduled for today.');
+
+      // Log available tip dates for debugging
+      const availableDates = tips.map(t => t.send_date).filter((v, i, a) => a.indexOf(v) === i);
+      console.log('📅 Available tip dates:', availableDates.join(', '));
       return;
     }
 
-    console.log(`found ${todaysTips.length} tips for today`);
+    console.log(`✅ Found ${todaysTips.length} tips for today:`, todaysTips.map(t => t.title).join(', '));
 
     // Filter users who have interacted in the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const activeUsers = users.filter(user => {
+      // Check if user has name and valid interaction date
+      if (!user.name) return false;
+
+      if (!user.last_interaction) {
+        // If no last interaction recorded, treat as active if they have a name (new user)
+        return true;
+      }
+
       const lastInteraction = new Date(user.last_interaction);
-      return lastInteraction > thirtyDaysAgo && user.name; // Only send to users who have provided their name
+      return lastInteraction > thirtyDaysAgo;
     });
 
-    console.log(`📤 Sending ${todaysTips.length} tips to ${activeUsers.length} active users`);
+    console.log(`📤 Preparing to send to ${activeUsers.length} active users (out of ${users.length} total)`);
+
+    if (activeUsers.length === 0) {
+      console.log('⚠️ No active users found to send tips to.');
+      return;
+    }
 
     for (const user of activeUsers) {
       try {
         const chatId = user.phone;
+
+        // Skip if chatId is invalid
+        if (!chatId || !chatId.includes('@')) {
+          console.log(`⚠️ Skipping invalid user phone: ${user.name}`);
+          continue;
+        }
 
         for (const tip of todaysTips) {
           const message = `🌱 *Daily Farming Tip from UCF*\n\n*${tip.title}*\n${tip.content}\n\n💡 *Remember:* We're here to help you grow! Type "menu" anytime to access our services.\n\n🌾 *UCF Agri-Bot - Your Farming Partner*`;

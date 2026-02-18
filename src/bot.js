@@ -202,6 +202,20 @@ let keepAliveInterval = null;
 let lastMessageBeforeDisconnect = null;
 const lastMessageFilePath = path.join(__dirname, '../temp/last_message.json');
 
+// Message deduplication - track processed message IDs
+const processedMessages = new Set();
+const MESSAGE_CACHE_SIZE = 100; // Keep last 100 message IDs
+
+// Clean up old message IDs periodically
+setInterval(() => {
+  if (processedMessages.size > MESSAGE_CACHE_SIZE) {
+    const messagesToKeep = Array.from(processedMessages).slice(-MESSAGE_CACHE_SIZE);
+    processedMessages.clear();
+    messagesToKeep.forEach(id => processedMessages.add(id));
+  }
+}, 60000); // Clean every minute
+
+
 // QR Code generation
 client.on('qr', async (qr) => {
   console.log('📱 Scan this QR code with WhatsApp:');
@@ -253,12 +267,20 @@ client.on('ready', async () => {
   }
 
   // Start keep-alive mechanism (ping every 30 seconds)
+  let keepAliveFailures = 0;
   keepAliveInterval = setInterval(async () => {
     try {
       const state = await client.getState();
       console.log('💓 Keep-alive ping - State:', state);
+      keepAliveFailures = 0; // Reset failure count on success
     } catch (error) {
-      console.error('❌ Keep-alive ping failed:', error.message);
+      console.error(`❌ Keep-alive ping failed (${keepAliveFailures + 1}/3):`, error.message);
+      keepAliveFailures++;
+
+      if (keepAliveFailures >= 3) {
+        console.error('🚨 Too many keep-alive failures. Forcing restart to recover...');
+        process.exit(1); // Force exit to trigger Docker restart
+      }
     }
   }, 30000);
 
@@ -429,6 +451,14 @@ client.on('message', async (message) => {
       return;
     }
 
+    // Message deduplication - prevent processing the same message multiple times
+    const messageId = message.id._serialized || message.id;
+    if (processedMessages.has(messageId)) {
+      console.log(`⏭️ Skipping duplicate message: ${messageId}`);
+      return;
+    }
+    processedMessages.add(messageId);
+
     console.log(`\n📨 Message from ${phoneNumber}: ${messageBody.substring(0, 50)}...`);
 
     // Track this as the last message (for reconnection handling)
@@ -466,9 +496,15 @@ client.on('message', async (message) => {
     const user = getUser(phoneNumber);
     const userState = userStates.get(phoneNumber) || { state: 'main_menu' };
 
-    // Handle greetings
+    // Handle greetings (skip if user was just activated)
     if (isGreeting(messageBody) && userState.state === 'main_menu') {
       await handleGreeting(message, user);
+      return;
+    }
+
+    // Handle greetings for users in awaiting_name state (they just got activated)
+    if (isGreeting(messageBody) && userState.state === 'awaiting_name') {
+      // User just got the welcome message from auto-activation, don't send another
       return;
     }
 
