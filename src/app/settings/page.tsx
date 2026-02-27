@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Ticket, Clock, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { Ticket, Clock, Save, CheckCircle2, AlertCircle, Globe } from "lucide-react";
 
 export default function SettingsPage() {
     const [promoCode, setPromoCode] = useState("");
@@ -94,7 +94,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* Promo Code Card */}
+            {/* === PROMO CODE — AT TOP === */}
             <Card>
                 <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2">
                     <Ticket className="h-5 w-5 text-yellow-500" />
@@ -102,8 +102,8 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-5 pt-4">
                     <p className="text-sm text-muted-foreground">
-                        Users can enter this code in the bot to receive <strong>1 month free premium access</strong>.
-                        Change it here anytime — the bot always reads the latest value.
+                        Users enter this code in the bot (option 8) to receive free premium access.
+                        Change it here anytime — the bot reads the latest value instantly.
                     </p>
 
                     <div className="space-y-2">
@@ -122,7 +122,7 @@ export default function SettingsPage() {
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium" htmlFor="promo-desc">
-                            Description (shown in bot)
+                            Reward Description (shown in bot)
                         </label>
                         <input
                             id="promo-desc"
@@ -136,7 +136,7 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* Daily Tips Time Card */}
+            {/* === DAILY TIPS SCHEDULE === */}
             <Card>
                 <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2">
                     <Clock className="h-5 w-5 text-blue-500" />
@@ -144,13 +144,13 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-5 pt-4">
                     <p className="text-sm text-muted-foreground">
-                        Set what time daily farming tips are sent to users, in{" "}
-                        <strong>Zimbabwe time (CAT, UTC+2)</strong>. Use 24-hour format.
+                        Set the time for daily farming tips to be sent to all active users.
+                        Tips rotate automatically through all available tips each day.
                     </p>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium" htmlFor="tips-time">
-                            Send Time (Zimbabwe time)
+                            Send Time (24-hour format)
                         </label>
                         <input
                             id="tips-time"
@@ -159,9 +159,19 @@ export default function SettingsPage() {
                             onChange={(e) => setTipsSendTime(e.target.value)}
                             className="w-48 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         />
-                        <p className="text-xs text-muted-foreground">
-                            Currently set to: <strong>{tipsSendTime}</strong> CAT — tips rotate daily through all available tips automatically.
-                        </p>
+                    </div>
+
+                    {/* Timezone info box */}
+                    <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <Globe className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                        <div className="text-sm text-blue-700 space-y-1">
+                            <p className="font-medium">Timezone: Zimbabwe (CAT — UTC+2)</p>
+                            <p className="text-blue-600">
+                                All times are in <strong>Central Africa Time (CAT)</strong>, which is
+                                UTC+2. This is the local time in Zimbabwe. Currently set to{" "}
+                                <strong>{tipsSendTime} CAT</strong>.
+                            </p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

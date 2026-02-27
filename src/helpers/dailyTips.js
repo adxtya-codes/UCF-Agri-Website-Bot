@@ -7,32 +7,38 @@ let whatsappClient = null;
 let lastTipSentDate = null;
 
 /**
- * Get the current date string in Zimbabwe time (Africa/Harare = UTC+2)
+ * Get the current time in Zimbabwe time as "HH:MM" string (24-hour format)
+ * Zimbabwe = Africa/Harare = UTC+2
  */
-function getZimbabweDate() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Harare' });
-}
-
-/**
- * Get the current hour and minute in Zimbabwe time
- */
-function getZimbabweTime() {
+function getZimbabweTimeStr() {
   const now = new Date();
-  const hour = parseInt(now.toLocaleString('en-US', { timeZone: 'Africa/Harare', hour: 'numeric', hour12: false }));
-  const raw = now.toLocaleString('en-US', { timeZone: 'Africa/Harare', minute: '2-digit' });
-  const minute = parseInt(raw);
-  return { hour: isNaN(hour) ? 0 : hour, minute: isNaN(minute) ? 0 : minute };
+  // UTC offset for Zimbabwe is +2 hours
+  const zwOffset = 2 * 60; // minutes
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const zwTotalMinutes = (utcMinutes + zwOffset + 1440) % 1440;
+  const zwHour = Math.floor(zwTotalMinutes / 60);
+  const zwMinute = zwTotalMinutes % 60;
+  return `${String(zwHour).padStart(2, '0')}:${String(zwMinute).padStart(2, '0')}`;
 }
 
 /**
- * Parse a time string like "08:00" or "10:30" into { hour, minute }
+ * Get the current date string in Zimbabwe time (YYYY-MM-DD)
  */
-function parseTimeSetting(timeStr) {
+function getZimbabweDateStr() {
+  const now = new Date();
+  const zwOffset = 2 * 60 * 60 * 1000; // +2 hours in ms
+  const zwDate = new Date(now.getTime() + zwOffset);
+  return zwDate.toISOString().slice(0, 10);
+}
+
+/**
+ * Normalize settings time to "HH:MM" format (e.g. "8:00" → "08:00")
+ */
+function normalizeTime(timeStr) {
   const parts = (timeStr || '08:00').split(':');
-  return {
-    hour: parseInt(parts[0]) || 8,
-    minute: parseInt(parts[1]) || 0
-  };
+  const h = String(parseInt(parts[0]) || 0).padStart(2, '0');
+  const m = String(parseInt(parts[1]) || 0).padStart(2, '0');
+  return `${h}:${m}`;
 }
 
 /**
@@ -44,37 +50,36 @@ function initializeDailyTips(client) {
 
   // Check every minute whether it's time to send tips
   setInterval(() => {
-    checkAndSendTips();
+    checkAndSendTips().catch(err => console.error('❌ Tips check error:', err));
   }, 60 * 1000);
 
   console.log('✅ Daily farming tips scheduler initialized (checks every minute, Zimbabwe time)');
+  console.log(`🕐 Current Zimbabwe time: ${getZimbabweTimeStr()} | Date: ${getZimbabweDateStr()}`);
 }
 
 /**
  * Check if it's time to send tips and send them if it is
  */
 async function checkAndSendTips() {
-  try {
-    const settings = loadSettings();
-    const sendTime = parseTimeSetting(settings.tips_send_time || '08:00');
-    const { hour, minute } = getZimbabweTime();
-    const todayZW = getZimbabweDate();
+  const settings = loadSettings();
+  const scheduledTime = normalizeTime(settings.tips_send_time || '08:00');
+  const currentTime = getZimbabweTimeStr();
+  const todayZW = getZimbabweDateStr();
 
-    // Fire at exact Zimbabwe time, once per day
-    if (hour === sendTime.hour && minute === sendTime.minute && lastTipSentDate !== todayZW) {
-      console.log(`🕐 It's ${hour}:${String(minute).padStart(2, '0')} Zimbabwe time — sending daily tips...`);
-      lastTipSentDate = todayZW; // mark as sent before sending to avoid duplicates
-      await sendDailyTips();
-    }
-  } catch (error) {
-    console.error('❌ Error in tips time-check:', error);
+  console.log(`💡 Tips check: ZW time=${currentTime}, scheduled=${scheduledTime}, lastSent=${lastTipSentDate}`);
+
+  // Fire at exact Zimbabwe time (HH:MM match), only once per day
+  if (currentTime === scheduledTime && lastTipSentDate !== todayZW) {
+    console.log(`🕐 Time matched! Sending daily tips (${scheduledTime} Zimbabwe time)...`);
+    lastTipSentDate = todayZW; // mark as sent before sending to avoid duplicates
+    await sendDailyTips();
   }
 }
 
 /**
  * Send daily farming tips to all active users.
- * Uses a ROTATING tip strategy (day-of-year index mod total tips) so tips
- * always send regardless of send_date values in tips.json.
+ * Uses a rotating tip strategy (day index mod total tips count) so tips
+ * always send every day regardless of send_date values in tips.json.
  */
 async function sendDailyTips() {
   try {
@@ -86,19 +91,19 @@ async function sendDailyTips() {
       return;
     }
 
-    const todayZW = getZimbabweDate();
+    const todayZW = getZimbabweDateStr();
     console.log(`📅 Sending daily tip for Zimbabwe date: ${todayZW}`);
 
-    // Calculate which tip to send based on day count from a fixed start
-    const startDate = new Date('2026-01-01T00:00:00+02:00');
-    const todayDate = new Date(todayZW + 'T00:00:00+02:00');
+    // Rotating tip: days since fixed start date, cycling through all tips
+    const startDate = new Date('2026-01-01T00:00:00Z');
+    const todayDate = new Date(todayZW + 'T00:00:00Z');
     const dayIndex = Math.floor((todayDate - startDate) / (1000 * 60 * 60 * 24));
     const tipIndex = ((dayIndex % tips.length) + tips.length) % tips.length;
     const todaysTip = tips[tipIndex];
 
     console.log(`💡 Today's tip (#${tipIndex + 1}/${tips.length}): "${todaysTip.title}"`);
 
-    // Active users: have a name, valid individual phone, interacted in last 90 days
+    // Filter valid, individual, active users
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -107,7 +112,8 @@ async function sendDailyTips() {
       if (!user.phone || !user.phone.includes('@')) return false;
       if (user.phone === 'status@broadcast') return false;
       if (user.phone.includes('@g.us')) return false; // skip group chats
-      if (!user.last_interaction) return true; // new users with a name, include them
+      if (user.phone.includes('@newsletter')) return false;
+      if (!user.last_interaction) return true;
       return new Date(user.last_interaction) > ninetyDaysAgo;
     });
 
@@ -181,7 +187,7 @@ function getDailyTipsStats() {
     return new Date(user.last_interaction) > ninetyDaysAgo;
   });
 
-  const sendTime = settings.tips_send_time || '08:00';
+  const sendTime = normalizeTime(settings.tips_send_time || '08:00');
 
   return {
     totalUsers: users.length,
