@@ -479,7 +479,7 @@ client.on('message', async (message) => {
       const user = getUser(phoneNumber);
 
       // Send activation message
-      await safeSendMessage(message, `🌾 *Welcome to UCF Agri-Bot!*\n\nHello! I'm Sam, your agricultural assistant.\n\nMay I know your name?`);
+      await safeSendMessage(message, `🌾 *Welcome to UCF Agri-Bot!*\n\nHello! I'm Sam, your agricultural assistant.\n\nYour name?`);
       userStates.set(phoneNumber, {
         state: 'awaiting_name',
         lastActivity: Date.now()
@@ -615,7 +615,7 @@ async function handleGreeting(message, user) {
   const phoneNumber = message.from;
 
   if (!user.name) {
-    await safeSendMessage(message, `👋 Hello! Welcome to UCF Agri-Bot!\n\nI'm Sam, your agricultural assistant. 🌾\n\nMay I know your name?`);
+    await safeSendMessage(message, `👋 Hello! Welcome to UCF Agri-Bot!\n\nI'm Sam, your agricultural assistant. 🌾\n\nYour name?`);
     userStates.set(phoneNumber, { state: 'awaiting_name' });
   } else {
     // Show premium menu for premium users, regular menu for others
