@@ -37,7 +37,8 @@ const {
   formatFertilizerCalculation,
   getFertilizerCalculatorPrompt,
   getCropFertilizerPlan,
-  formatCropFertilizerPlan
+  formatCropFertilizerPlan,
+  loadSettings
 } = require('./helpers/utils');
 
 /**
@@ -586,6 +587,8 @@ client.on('message', async (message) => {
       await handleFertilizerProductSelection(message, user, messageBody, userState);
     } else if (userState.state === 'fertilizer_custom_npk') {
       await handleFertilizerCustomNPK(message, user, messageBody, userState);
+    } else if (userState.state === 'awaiting_promo_code') {
+      await handlePromoCodeInput(message, user, messageBody);
     } else {
       // Default: try to understand with GPT
       await handleGeneralQuery(message, user, messageBody);
@@ -647,6 +650,13 @@ async function handleNameInput(message, user, messageBody) {
  */
 async function handlePhoneInput(message, user, messageBody) {
   const phoneNumber = message.from;
+
+  // Validate phone number - must contain at least 7 digits
+  const digitCount = (messageBody.match(/\d/g) || []).length;
+  if (digitCount < 7) {
+    await safeSendMessage(message, `❌ That doesn\'t look like a valid phone number.\n\nPlease enter your phone number with country code.\n\nExample: *+263 798765432* or *+91 9876543210*\n\n_(Don\'t forget the + Country Code)_`);
+    return; // Stay in awaiting_phone state
+  }
 
   // Save phone number
   updateUser(phoneNumber, { phone_numeric: messageBody });
@@ -780,6 +790,18 @@ _Type "menu" to go back to main menu_`);
     return;
   }
 
+  // Option 8: Promo Code
+  if (input.includes('8') || input.includes('promo') || input.includes('code')) {
+    if (isPremiumActive(user)) {
+      await safeSendMessage(message, `✅ You already have *premium access* active!\n\n🎉 Valid until: ${formatDate(user.premium_expiry_date)}\n\nNo promo code needed. Enjoy your premium features! 🌟\n\n_Type "menu" to go back_`);
+    } else {
+      const settings = loadSettings();
+      await safeSendMessage(message, `🎟️ *Promo Code*\n\nDo you have a promo code?\n\nEnter your promo code below to get *${settings.promo_code_description || '1 month free premium access'}*!\n\n_Type "menu" to go back to main menu_`);
+      userStates.set(phoneNumber, { state: 'awaiting_promo_code' });
+    }
+    return;
+  }
+
   // Menu command
   if (input === 'menu') {
     await safeSendMessage(message, getMainMenu(user.name));
@@ -788,6 +810,41 @@ _Type "menu" to go back to main menu_`);
 
   // Default: Try to understand intent
   await handleGeneralQuery(message, user, messageBody);
+}
+
+/**
+ * Handle promo code input
+ */
+async function handlePromoCodeInput(message, user, messageBody) {
+  const phoneNumber = message.from;
+  const input = messageBody.trim();
+
+  // Allow user to go back
+  if (input.toLowerCase() === 'menu') {
+    await safeSendMessage(message, getMainMenu(user.name));
+    userStates.set(phoneNumber, { state: 'main_menu' });
+    return;
+  }
+
+  // Load the current promo code from settings (read live so admins can change it)
+  const settings = loadSettings();
+  const validCode = (settings.promo_code || '').trim();
+
+  if (input === validCode) {
+    // Grant 1 month premium
+    const expiryDate = getExpiryDate();
+    updateUser(phoneNumber, {
+      is_premium: true,
+      premium_expiry_date: expiryDate
+    });
+
+    const updatedUser = getUser(phoneNumber);
+    await safeSendMessage(message, `🎉 *Promo Code Accepted!*\n\nCongratulations ${user.name || ''}! 🌟\n\nYou now have *${settings.promo_code_description || '1 month free premium access'}*!\n\n✅ Valid until: ${formatDate(expiryDate)}\n\n*Your Premium Features:*\n1️⃣ Crop disease diagnosis\n2️⃣ Fertilizer Calculator\n3️⃣ Exclusive Farming Guides\n4️⃣ Expert agronomist support\n\n${getPremiumMenu(updatedUser.name)}`);
+    userStates.set(phoneNumber, { state: 'premium_menu' });
+  } else {
+    await safeSendMessage(message, `❌ *Invalid Promo Code*\n\nSorry, that code is not valid. Please check and try again.\n\nEnter your promo code:\n_(Type "menu" to go back)_`);
+    // Stay in awaiting_promo_code state
+  }
 }
 
 /**

@@ -18,6 +18,7 @@ import {
     Droplet,
     LogOut,
     MessageSquare,
+    Ticket,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -34,6 +35,7 @@ const navigation = [
     { name: "Fertilizer Calc", href: "/fertilizers", icon: Calculator },
     { name: "Crop Diagnosis", href: "/crop-diagnosis", icon: Leaf },
     { name: "Soil Analysis", href: "/soil-analysis", icon: Droplet },
+    { name: "Settings", href: "/settings", icon: Ticket },
 ];
 
 export function Sidebar() {

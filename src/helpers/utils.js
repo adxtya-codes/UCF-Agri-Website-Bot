@@ -3,6 +3,21 @@ const path = require('path');
 const crypto = require('crypto');
 
 /**
+ * Load settings from settings.json
+ * @returns {Object} - Settings object
+ */
+function loadSettings() {
+  try {
+    const filePath = path.join(__dirname, '../data/settings.json');
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('❌ Error loading settings.json:', error.message);
+    return { promo_code: '8841', promo_code_description: '1 month free premium access' };
+  }
+}
+
+/**
  * Load JSON data from file
  * @param {string} filename - Name of the JSON file
  * @returns {Array|Object} - Parsed JSON data
@@ -251,7 +266,7 @@ function formatProductList(products) {
 function getMainMenu(userName = '') {
   const greeting = userName ? `Hello ${userName}! 👋` : 'Welcome to UCF Agri-Bot! 🌾';
 
-  return `${greeting}\n\nI'm Sam, your agricultural assistant. How can I help you today? You can ask me anything.\n\n*Please choose:* \n\n1️⃣ *Crop Diagnosis* 🔬 (Premium)\n   Analyze crop diseases from photos\n\n2️⃣ *Fertilizer Calculator* 🧮 (Premium)\n   Calculate fertilizer quantity & budget plan\n\n3️⃣ *Find Shop* 📍\n   Locate nearest UCF retailers\n\n4️⃣ *Expert Help* 👨‍🌾 (Premium)\n   Connect with our agronomist\n\n5️⃣ *Exclusive Farming Guides* 📚 (Premium)\n   Download premium farming guides\n\n6️⃣ *Product Q&A* 💬\n   Ask about UCF products\n\n7️⃣ *Premium Access* 🔒\n   Verify your purchase receipt\n\nJust reply with the number or describe what you need!`;
+  return `${greeting}\n\nI'm Sam, your agricultural assistant. How can I help you today? You can ask me anything.\n\n*Please choose:* \n\n1️⃣ *Crop Diagnosis* 🔬 (Premium)\n   Analyze crop diseases from photos\n\n2️⃣ *Fertilizer Calculator* 🧮 (Premium)\n   Calculate fertilizer quantity & budget plan\n\n3️⃣ *Find Shop* 📍\n   Locate nearest UCF retailers\n\n4️⃣ *Expert Help* 👨‍🌾 (Premium)\n   Connect with our agronomist\n\n5️⃣ *Exclusive Farming Guides* 📚 (Premium)\n   Download premium farming guides\n\n6️⃣ *Product Q&A* 💬\n   Ask about UCF products\n\n7️⃣ *Premium Access* 🔒\n   Verify your purchase receipt\n\n8️⃣ *Promo Code* 🎟️\n   Have a promo code? Get free premium!\n\nJust reply with the number or describe what you need!`;
 }
 
 /**
@@ -612,6 +627,7 @@ function formatCropFertilizerPlan(plan) {
 module.exports = {
   loadData,
   saveData,
+  loadSettings,
   getUser,
   updateUser,
   isPremiumActive,
