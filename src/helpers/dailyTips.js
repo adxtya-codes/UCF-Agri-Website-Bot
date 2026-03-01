@@ -7,13 +7,11 @@ let whatsappClient = null;
 let lastTipSentDate = null;
 
 /**
- * Get the current time in Zimbabwe time as "HH:MM" string (24-hour format)
- * Zimbabwe = Africa/Harare = UTC+2
+ * Get the current time in Zimbabwe time as "HH:MM" string (24h, UTC+2)
  */
 function getZimbabweTimeStr() {
   const now = new Date();
-  // UTC offset for Zimbabwe is +2 hours
-  const zwOffset = 2 * 60; // minutes
+  const zwOffset = 2 * 60; // Zimbabwe is UTC+2, in minutes
   const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
   const zwTotalMinutes = (utcMinutes + zwOffset + 1440) % 1440;
   const zwHour = Math.floor(zwTotalMinutes / 60);
@@ -22,7 +20,7 @@ function getZimbabweTimeStr() {
 }
 
 /**
- * Get the current date string in Zimbabwe time (YYYY-MM-DD)
+ * Get the current date in Zimbabwe time as "YYYY-MM-DD" string (UTC+2)
  */
 function getZimbabweDateStr() {
   const now = new Date();
@@ -32,7 +30,7 @@ function getZimbabweDateStr() {
 }
 
 /**
- * Normalize settings time to "HH:MM" format (e.g. "8:00" → "08:00")
+ * Normalize a time string to "HH:MM" (e.g. "8:0" → "08:00")
  */
 function normalizeTime(timeStr) {
   const parts = (timeStr || '08:00').split(':');
@@ -58,7 +56,7 @@ function initializeDailyTips(client) {
 }
 
 /**
- * Check if it's time to send tips and send them if it is
+ * Check if it's time to send tips and if any tips are scheduled for today
  */
 async function checkAndSendTips() {
   const settings = loadSettings();
@@ -66,20 +64,24 @@ async function checkAndSendTips() {
   const currentTime = getZimbabweTimeStr();
   const todayZW = getZimbabweDateStr();
 
-  console.log(`💡 Tips check: ZW time=${currentTime}, scheduled=${scheduledTime}, lastSent=${lastTipSentDate}`);
+  // Only log every 5 minutes to avoid log spam (when minute is divisible by 5)
+  const currentMinute = parseInt(currentTime.split(':')[1]);
+  if (currentMinute % 5 === 0) {
+    console.log(`💡 Tips check: ZW time=${currentTime}, scheduled=${scheduledTime}, date=${todayZW}`);
+  }
 
-  // Fire at exact Zimbabwe time (HH:MM match), only once per day
+  // Fire at exact Zimbabwe time, once per day
   if (currentTime === scheduledTime && lastTipSentDate !== todayZW) {
-    console.log(`🕐 Time matched! Sending daily tips (${scheduledTime} Zimbabwe time)...`);
-    lastTipSentDate = todayZW; // mark as sent before sending to avoid duplicates
+    console.log(`🕐 Time matched (${scheduledTime} ZW)! Checking for scheduled tips...`);
+    lastTipSentDate = todayZW;
     await sendDailyTips();
   }
 }
 
 /**
  * Send daily farming tips to all active users.
- * Uses a rotating tip strategy (day index mod total tips count) so tips
- * always send every day regardless of send_date values in tips.json.
+ * Sends ONLY tips whose send_date matches today's Zimbabwe date.
+ * You control exactly what gets sent and when from the dashboard.
  */
 async function sendDailyTips() {
   try {
@@ -92,18 +94,28 @@ async function sendDailyTips() {
     }
 
     const todayZW = getZimbabweDateStr();
-    console.log(`📅 Sending daily tip for Zimbabwe date: ${todayZW}`);
+    console.log(`📅 Looking for tips scheduled for: ${todayZW}`);
 
-    // Rotating tip: days since fixed start date, cycling through all tips
-    const startDate = new Date('2026-01-01T00:00:00Z');
-    const todayDate = new Date(todayZW + 'T00:00:00Z');
-    const dayIndex = Math.floor((todayDate - startDate) / (1000 * 60 * 60 * 24));
-    const tipIndex = ((dayIndex % tips.length) + tips.length) % tips.length;
-    const todaysTip = tips[tipIndex];
+    // Only send tips that are scheduled for today (exact date match)
+    const todaysTips = tips.filter(tip => tip.send_date === todayZW);
 
-    console.log(`💡 Today's tip (#${tipIndex + 1}/${tips.length}): "${todaysTip.title}"`);
+    if (todaysTips.length === 0) {
+      console.log(`ℹ️ No tips scheduled for today (${todayZW}). Nothing to send.`);
+      // Log upcoming scheduled dates to help admin
+      const futureDates = tips
+        .map(t => t.send_date)
+        .filter(d => d && d > todayZW)
+        .sort();
+      const uniqueFuture = [...new Set(futureDates)].slice(0, 5);
+      if (uniqueFuture.length > 0) {
+        console.log(`📆 Upcoming scheduled tip dates: ${uniqueFuture.join(', ')}`);
+      }
+      return;
+    }
 
-    // Filter valid, individual, active users
+    console.log(`✅ Found ${todaysTips.length} tip(s) for today: ${todaysTips.map(t => t.title).join(', ')}`);
+
+    // Filter valid, individual, active users (interacted in last 90 days)
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -111,7 +123,7 @@ async function sendDailyTips() {
       if (!user.name) return false;
       if (!user.phone || !user.phone.includes('@')) return false;
       if (user.phone === 'status@broadcast') return false;
-      if (user.phone.includes('@g.us')) return false; // skip group chats
+      if (user.phone.includes('@g.us')) return false;
       if (user.phone.includes('@newsletter')) return false;
       if (!user.last_interaction) return true;
       return new Date(user.last_interaction) > ninetyDaysAgo;
@@ -129,11 +141,12 @@ async function sendDailyTips() {
 
     for (const user of activeUsers) {
       try {
-        const tipMessage = `🌱 *Daily Farming Tip from UCF*\n\n*${todaysTip.title}*\n${todaysTip.content}\n\n💡 *Remember:* We're here to help you grow! Type "menu" anytime to access our services.\n\n🌾 *UCF Agri-Bot - Your Farming Partner*`;
-        await whatsappClient.sendMessage(user.phone, tipMessage);
+        for (const tip of todaysTips) {
+          const tipMessage = `🌱 *Daily Farming Tip from UCF*\n\n*${tip.title}*\n${tip.content}\n\n💡 *Remember:* We're here to help you grow! Type "menu" anytime to access our services.\n\n🌾 *UCF Agri-Bot - Your Farming Partner*`;
+          await whatsappClient.sendMessage(user.phone, tipMessage);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
         successCount++;
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (error) {
         failCount++;
         console.error(`❌ Failed to send tip to ${user.phone} (${user.name}):`, error.message);
