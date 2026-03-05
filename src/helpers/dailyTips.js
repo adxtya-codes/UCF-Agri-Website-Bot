@@ -3,8 +3,9 @@ const { loadData, loadSettings } = require('./utils');
 // Store the WhatsApp client reference
 let whatsappClient = null;
 
-// Track whether tips were already sent today (Zimbabwe date) - resets on restart
-let lastTipSentDate = null;
+// Track which tip IDs have already been sent today (keyed by ZW date string)
+// Prevents double-sends if the bot restarts mid-day within the same minute
+const sentTipsLog = new Map();
 
 /**
  * Get the current time in Zimbabwe time as "HH:MM" string (24h, UTC+2)
@@ -51,71 +52,65 @@ function initializeDailyTips(client) {
     checkAndSendTips().catch(err => console.error('❌ Tips check error:', err));
   }, 60 * 1000);
 
-  console.log('✅ Daily farming tips scheduler initialized (checks every minute, Zimbabwe time)');
+  console.log('✅ Daily farming tips scheduler initialized (per-tip timing, Zimbabwe UTC+2)');
   console.log(`🕐 Current Zimbabwe time: ${getZimbabweTimeStr()} | Date: ${getZimbabweDateStr()}`);
 }
 
 /**
- * Check if it's time to send tips and if any tips are scheduled for today
+ * Check every minute if any tips are due right now (per-tip Zimbabwe time).
+ * Each tip fires at its own send_time on its send_date.
+ * Falls back to settings.tips_send_time if a tip has no send_time.
  */
 async function checkAndSendTips() {
   const settings = loadSettings();
-  const scheduledTime = normalizeTime(settings.tips_send_time || '08:00');
+  const globalFallbackTime = normalizeTime(settings.tips_send_time || '08:00');
   const currentTime = getZimbabweTimeStr();
   const todayZW = getZimbabweDateStr();
 
-  // Only log every 5 minutes to avoid log spam (when minute is divisible by 5)
+  // Only log every 5 minutes to keep logs clean
   const currentMinute = parseInt(currentTime.split(':')[1]);
   if (currentMinute % 5 === 0) {
-    console.log(`💡 Tips check: ZW time=${currentTime}, scheduled=${scheduledTime}, date=${todayZW}`);
+    console.log(`💡 Tips check: ZW time=${currentTime}, date=${todayZW}, fallback=${globalFallbackTime}`);
   }
 
-  // Fire at exact Zimbabwe time, once per day
-  if (currentTime === scheduledTime && lastTipSentDate !== todayZW) {
-    console.log(`🕐 Time matched (${scheduledTime} ZW)! Checking for scheduled tips...`);
-    lastTipSentDate = todayZW;
-    await sendDailyTips();
+  const tips = loadData('tips.json');
+  if (tips.length === 0) return;
+
+  // Ensure today's sent-log Set exists; prune old dates
+  if (!sentTipsLog.has(todayZW)) {
+    sentTipsLog.set(todayZW, new Set());
+    for (const [date] of sentTipsLog) {
+      if (date < todayZW) sentTipsLog.delete(date);
+    }
+  }
+  const todaySent = sentTipsLog.get(todayZW);
+
+  // Filter tips due right now at the current Zimbabwe minute
+  const dueTips = tips.filter(tip => {
+    if (tip.send_date !== todayZW) return false;          // wrong date
+    if (todaySent.has(tip.id)) return false;              // already dispatched today
+    const tipTime = normalizeTime(tip.send_time || globalFallbackTime);
+    return currentTime === tipTime;                        // Zimbabwe time match
+  });
+
+  if (dueTips.length === 0) return;
+
+  console.log(`🕐 ${dueTips.length} tip(s) due at ${currentTime} ZW: ${dueTips.map(t => t.title).join(', ')}`);
+
+  for (const tip of dueTips) {
+    todaySent.add(tip.id); // mark BEFORE awaiting to prevent re-entry
+    await sendTipToAllUsers(tip);
   }
 }
 
 /**
- * Send daily farming tips to all active users.
- * Sends ONLY tips whose send_date matches today's Zimbabwe date.
- * You control exactly what gets sent and when from the dashboard.
+ * Send a single tip to all active users.
+ * @param {object} tip - Tip object from tips.json
  */
-async function sendDailyTips() {
+async function sendTipToAllUsers(tip) {
   try {
     const users = loadData('users.json');
-    const tips = loadData('tips.json');
 
-    if (tips.length === 0) {
-      console.log('⚠️ No farming tips available');
-      return;
-    }
-
-    const todayZW = getZimbabweDateStr();
-    console.log(`📅 Looking for tips scheduled for: ${todayZW}`);
-
-    // Only send tips that are scheduled for today (exact date match)
-    const todaysTips = tips.filter(tip => tip.send_date === todayZW);
-
-    if (todaysTips.length === 0) {
-      console.log(`ℹ️ No tips scheduled for today (${todayZW}). Nothing to send.`);
-      // Log upcoming scheduled dates to help admin
-      const futureDates = tips
-        .map(t => t.send_date)
-        .filter(d => d && d > todayZW)
-        .sort();
-      const uniqueFuture = [...new Set(futureDates)].slice(0, 5);
-      if (uniqueFuture.length > 0) {
-        console.log(`📆 Upcoming scheduled tip dates: ${uniqueFuture.join(', ')}`);
-      }
-      return;
-    }
-
-    console.log(`✅ Found ${todaysTips.length} tip(s) for today: ${todaysTips.map(t => t.title).join(', ')}`);
-
-    // Filter valid, individual, active users (interacted in last 90 days)
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -129,7 +124,7 @@ async function sendDailyTips() {
       return new Date(user.last_interaction) > ninetyDaysAgo;
     });
 
-    console.log(`📤 Sending to ${activeUsers.length} active users (${users.length} total)`);
+    console.log(`📤 Sending tip "${tip.title}" to ${activeUsers.length} active users`);
 
     if (activeUsers.length === 0) {
       console.log('⚠️ No active users to send tips to.');
@@ -141,11 +136,9 @@ async function sendDailyTips() {
 
     for (const user of activeUsers) {
       try {
-        for (const tip of todaysTips) {
-          const tipMessage = `🌱 *Daily Farming Tip from UCF*\n\n*${tip.title}*\n${tip.content}\n\n💡 *Remember:* We're here to help you grow! Type "menu" anytime to access our services.\n\n🌾 *UCF Agri-Bot - Your Farming Partner*`;
-          await whatsappClient.sendMessage(user.phone, tipMessage);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
+        const tipMessage = `🌱 *Daily Farming Tip from UCF*\n\n*${tip.title}*\n${tip.content}\n\n💡 *Remember:* We're here to help you grow! Type "menu" anytime to access our services.\n\n🌾 *UCF Agri-Bot - Your Farming Partner*`;
+        await whatsappClient.sendMessage(user.phone, tipMessage);
+        await new Promise(resolve => setTimeout(resolve, 1500));
         successCount++;
       } catch (error) {
         failCount++;
@@ -153,10 +146,23 @@ async function sendDailyTips() {
       }
     }
 
-    console.log(`🌱 Daily tips done: ✅ ${successCount} sent, ❌ ${failCount} failed`);
-
+    console.log(`🌱 Tip "${tip.title}" done: ✅ ${successCount} sent, ❌ ${failCount} failed`);
   } catch (error) {
-    console.error('❌ Error in daily tips system:', error);
+    console.error('❌ Error sending tip to users:', error);
+  }
+}
+
+/**
+ * Legacy alias — kept so any existing callers don't break.
+ * Sends ALL tips scheduled for today regardless of their individual send_time.
+ */
+async function sendDailyTips() {
+  const todayZW = getZimbabweDateStr();
+  const tips = loadData('tips.json');
+  const todaysTips = tips.filter(t => t.send_date === todayZW);
+  console.log(`📅 sendDailyTips: ${todaysTips.length} tip(s) for ${todayZW}`);
+  for (const tip of todaysTips) {
+    await sendTipToAllUsers(tip);
   }
 }
 
