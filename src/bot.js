@@ -11,7 +11,7 @@ const { getGPTResponse, analyzeReceipt, getDiagnosisAdvice, answerProductQuestio
 const { processReceipt } = require('./helpers/ocr');
 const { processPlantImage, formatDiseaseName } = require('./helpers/plantAI');
 const { findNearestShops, formatShopsMessage } = require('./helpers/maps');
-const { initializeDailyTips, sendTestTip, getDailyTipsStats } = require('./helpers/dailyTips');
+const { initializeDailyTips, sendTestTip, sendTargetedTip, listAllTips, getDailyTipsStats } = require('./helpers/dailyTips');
 const {
   loadData,
   saveData,
@@ -547,6 +547,30 @@ client.on('message', async (message) => {
     if (messageBody.toLowerCase().trim() === 'tip-stats') {
       const stats = getDailyTipsStats();
       await safeSendMessage(message, `📊 *Daily Tips Statistics*\n\n👥 Total Users: ${stats.totalUsers}\n✅ Active Users: ${stats.activeUsers}\n💡 Available Tips: ${stats.totalTips}\n⏰ Schedule: ${stats.lastScheduledTime}`);
+      return;
+    }
+
+    // Admin: list all available tips
+    if (messageBody.toLowerCase().trim() === 'tip-list') {
+      await safeSendMessage(message, listAllTips() + '\n\n_Use: send-tip <number or id> <phone> to send a targeted tip_');
+      return;
+    }
+
+    // Admin: send a targeted tip  → send-tip <tipId|number> <phone>
+    // Example: send-tip 3 263771234567@c.us
+    // Example: send-tip tip_005 263771234567@c.us
+    if (messageBody.toLowerCase().startsWith('send-tip ')) {
+      const parts = messageBody.trim().split(/\s+/);
+      // parts[0] = 'send-tip', parts[1] = tip identifier, parts[2] = phone
+      if (parts.length < 3) {
+        await safeSendMessage(message, `❌ *Usage:* send-tip <tipNumber or tipId> <phone>\n\nExamples:\n• send-tip 3 263771234567@c.us\n• send-tip tip_005 263771234567@c.us\n\nType *tip-list* to see available tips.`);
+        return;
+      }
+      const tipIdentifier = parts[1];
+      const targetPhone = parts[2];
+      await safeSendMessage(message, `⏳ Sending tip to ${targetPhone}...`);
+      const result = await sendTargetedTip(targetPhone, tipIdentifier);
+      await safeSendMessage(message, result.message);
       return;
     }
 

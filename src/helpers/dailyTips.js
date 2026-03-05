@@ -161,7 +161,7 @@ async function sendDailyTips() {
 }
 
 /**
- * Send a test tip immediately (for testing)
+ * Send a test tip immediately (random tip, for testing)
  * @param {string} phoneNumber - Phone number to send test tip to
  */
 async function sendTestTip(phoneNumber) {
@@ -180,6 +180,57 @@ async function sendTestTip(phoneNumber) {
   } catch (error) {
     console.error(`❌ Failed to send test tip to ${phoneNumber}:`, error);
   }
+}
+
+/**
+ * Send a specific (targeted) tip to a specific phone number.
+ * @param {string} phoneNumber - Recipient phone number (WhatsApp ID, e.g. "2637xxx@c.us")
+ * @param {string|number} tipIdentifier - Tip ID (e.g. "tip_003") OR 1-based index number
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+async function sendTargetedTip(phoneNumber, tipIdentifier) {
+  try {
+    const tips = loadData('tips.json');
+    if (tips.length === 0) {
+      return { success: false, message: '⚠️ No tips available.' };
+    }
+
+    let tip = null;
+
+    // Try by numeric index (1-based)
+    const idx = parseInt(tipIdentifier, 10);
+    if (!isNaN(idx) && idx >= 1 && idx <= tips.length) {
+      tip = tips[idx - 1];
+    } else {
+      // Try by tip ID string (e.g. "tip_003")
+      tip = tips.find(t => t.id === tipIdentifier);
+    }
+
+    if (!tip) {
+      return {
+        success: false,
+        message: `❌ Tip not found: "${tipIdentifier}". Use a valid tip number (1-${tips.length}) or ID (e.g. tip_001).`
+      };
+    }
+
+    const msgText = `🌱 *Daily Farming Tip from UCF*\n\n*${tip.title}*\n${tip.content}\n\n💡 *Remember:* We're here to help you grow! Type "menu" anytime to access our services.\n\n🌾 *UCF Agri-Bot - Your Farming Partner*`;
+    await whatsappClient.sendMessage(phoneNumber, msgText);
+    console.log(`✅ Targeted tip "${tip.title}" sent to ${phoneNumber}`);
+    return { success: true, message: `✅ Tip *${tip.title}* sent to ${phoneNumber}` };
+  } catch (error) {
+    console.error(`❌ Failed to send targeted tip to ${phoneNumber}:`, error);
+    return { success: false, message: `❌ Failed to send tip: ${error.message}` };
+  }
+}
+
+/**
+ * Return a formatted list of all available tips (id, index, title).
+ */
+function listAllTips() {
+  const tips = loadData('tips.json');
+  if (tips.length === 0) return '⚠️ No tips available.';
+  const lines = tips.map((t, i) => `${i + 1}. [${t.id}] *${t.title}*`);
+  return `📋 *Available Tips (${tips.length}):*\n\n${lines.join('\n')}`;
 }
 
 /**
@@ -214,5 +265,7 @@ module.exports = {
   initializeDailyTips,
   sendDailyTips,
   sendTestTip,
+  sendTargetedTip,
+  listAllTips,
   getDailyTipsStats
 };
