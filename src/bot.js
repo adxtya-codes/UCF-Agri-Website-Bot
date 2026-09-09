@@ -207,8 +207,18 @@ async function safeSendMessage(chatId, content, options = {}) {
 // Track user states with timestamps for cleanup
 const userStates = new Map();
 
-// Track activated users (users who have typed "crop")
+// Track activated users — pre-populate from users.json so returning users
+// are recognised immediately after a bot restart (no re-welcome prompt).
 const activatedUsers = new Set();
+try {
+  const existingUsers = loadData('users.json');
+  if (Array.isArray(existingUsers)) {
+    existingUsers.forEach(u => { if (u.phone) activatedUsers.add(u.phone); });
+    console.log(`👥 Pre-loaded ${activatedUsers.size} returning user(s) into activatedUsers`);
+  }
+} catch (e) {
+  console.warn('⚠️ Could not pre-load users into activatedUsers:', e.message);
+}
 
 // Keep-alive interval reference
 let keepAliveInterval = null;
@@ -530,12 +540,23 @@ client.on('message', async (message) => {
       // Get or create user
       const user = getUser(phoneNumber);
 
-      // Send activation message
-      await safeSendMessage(message, `🌾 *Welcome to UCF Agri-Bot!*\n\nHello! I'm Sam, your agricultural assistant.\n\nMay I know your name? _(Just type your name only)_`);
-      userStates.set(phoneNumber, {
-        state: 'awaiting_name',
-        lastActivity: Date.now()
-      });
+      if (user.name) {
+        // Returning user — bot was restarted. Greet them and show the right menu.
+        if (isPremiumActive(user)) {
+          await safeSendMessage(message, `👋 Welcome back, *${user.name}*! 🌟\n\nYour premium access is active until *${formatDate(user.premium_expiry_date)}*.\n\n${getPremiumMenu(user.name)}`);
+          userStates.set(phoneNumber, { state: 'premium_menu', lastActivity: Date.now() });
+        } else {
+          await safeSendMessage(message, `👋 Welcome back, *${user.name}*! 🌾\n\n${getMainMenu(user.name)}`);
+          userStates.set(phoneNumber, { state: 'main_menu', lastActivity: Date.now() });
+        }
+      } else {
+        // Brand new user — ask for name.
+        await safeSendMessage(message, `🌾 *Welcome to UCF Agri-Bot!*\n\nHello! I'm Sam, your agricultural assistant.\n\nMay I know your name? _(Just type your name only)_`);
+        userStates.set(phoneNumber, {
+          state: 'awaiting_name',
+          lastActivity: Date.now()
+        });
+      }
       return;
     }
 
@@ -870,6 +891,12 @@ _Type "menu" to go back to main menu_`);
   if (input.includes('8') || input.includes('promo') || input.includes('code')) {
     if (isPremiumActive(user)) {
       await safeSendMessage(message, `✅ You already have *premium access* active!\n\n🎉 Valid until: ${formatDate(user.premium_expiry_date)}\n\nNo promo code needed. Enjoy your premium features! 🌟\n\n_Type "menu" to go back_`);
+    } else if (user.promo_code_used) {
+      // Promo already redeemed — expired or not, cannot reuse
+      const expiredMsg = user.premium_expiry_date
+        ? `\n\nYour previous premium access (via promo) expired on *${formatDate(user.premium_expiry_date)}*.`
+        : '';
+      await safeSendMessage(message, `❌ *Promo Code Already Used*\n\nYou have already redeemed a promo code on this number.${expiredMsg}\n\nTo renew your premium, please purchase a subscription or contact us.\n\n_Type "menu" to go back_`);
     } else {
       const settings = loadSettings();
       await safeSendMessage(message, `🎟️ *Promo Code*\n\nDo you have a promo code?\n\nEnter your promo code below to get *${settings.promo_code_description || '1 month free premium access'}*!\n\n_Type "menu" to go back to main menu_`);
@@ -902,16 +929,25 @@ async function handlePromoCodeInput(message, user, messageBody) {
     return;
   }
 
+  // Safety check: promo already used (shouldn’t normally reach here, but guard anyway)
+  if (user.promo_code_used) {
+    await safeSendMessage(message, `❌ You have already redeemed a promo code on this number.\n\nTo renew premium, please purchase a subscription or contact us.\n\n_Type "menu" to go back_`);
+    userStates.set(phoneNumber, { state: 'main_menu' });
+    return;
+  }
+
   // Load the current promo code from settings (read live so admins can change it)
   const settings = loadSettings();
   const validCode = (settings.promo_code || '').trim();
 
   if (input === validCode) {
-    // Grant 1 month premium
+    // Grant 1 month premium and permanently mark the promo as used for this user
     const expiryDate = getExpiryDate();
     updateUser(phoneNumber, {
       is_premium: true,
-      premium_expiry_date: expiryDate
+      premium_expiry_date: expiryDate,
+      promo_code_used: true,
+      promo_code_redeemed_at: new Date().toISOString()
     });
 
     const updatedUser = getUser(phoneNumber);

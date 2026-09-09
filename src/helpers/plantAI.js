@@ -21,7 +21,7 @@ function loadProducts() {
 }
 
 /**
- * Analyze agricultural image (crop, soil, leaves, plants, trees) using GPT-4 Vision
+ * Analyze agricultural image (crop, soil, leaves, plants, trees) using GPT-4o Vision
  * @param {string} imagePath - Path to the agricultural image
  * @returns {Promise<Object>} - Comprehensive analysis with recommendations
  */
@@ -44,75 +44,110 @@ async function detectPlantDisease(imagePath) {
     const imageExtension = imagePath.split('.').pop().toLowerCase();
     const mimeType = imageExtension === 'png' ? 'image/png' : 'image/jpeg';
 
-    // Call GPT-4o Vision API (full model for accurate diagnosis)
+    // Call GPT-4o Vision API
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: `You are a senior plant pathologist and agronomist with 20+ years of experience diagnosing crop diseases, nutrient deficiencies, and pest damage from field photographs.
+          content: `You are Dr. Agri — a senior plant pathologist and agronomist with 25+ years of field and laboratory experience across African and Asian cropping systems. You specialize in:
+- Visual nutrient deficiency diagnosis (distinguishing N, P, K, Mg, Ca, S, Fe, Zn, Mn, B deficiencies by symptom pattern)
+- Fungal, bacterial, and viral disease identification from field photographs
+- Pest damage pattern recognition
 
-Your MOST CRITICAL rule: **Base every conclusion ONLY on what is visually and specifically observable in the image provided.** 
-
-DO NOT guess or assume based on common diseases. DO NOT fill sections with generic advice if you cannot see direct evidence.
-
-If the image is unclear, blurry, or does not have enough visible symptoms, say so honestly in the DETAILED ANALYSIS and lower the AI Confidence score below 75%.
-
-Use your visual expertise to distinguish between:
-- Nutrient deficiencies (chlorosis patterns: interveinal, marginal, tip burn)
-- Fungal diseases (spots, lesions, halo patterns, sporulation)
-- Bacterial diseases (water-soaked lesions, yellowing with defined margins)
-- Viral diseases (mosaic, distortion, ring spots)
-- Pest damage (feeding patterns, entry holes, frass)
-- Environmental stress (scorching, wilting patterns, hail damage)
-
-Always specify which exact leaves, plant parts, or field area you are observing symptoms on.`
+YOUR ABSOLUTE RULES:
+1. GROUND EVERY CLAIM IN VISUAL EVIDENCE. Quote exactly what you see (e.g. "interveinal chlorosis on leaf lamina of the 3rd and 4th oldest leaves, with primary and secondary veins remaining green"). Never write generic text.
+2. USE DIFFERENTIAL DIAGNOSIS. For each symptom, explicitly rule out similar conditions. Example: "The pattern is interveinal on older leaves → consistent with Mg or Mn deficiency, NOT N deficiency (which starts on older leaves uniformly) and NOT Fe deficiency (which starts on youngest leaves)."
+3. NEVER HALLUCINATE. If you cannot clearly see a symptom, write "Not clearly visible in this image."
+4. CONFIDENCE CALIBRATION:
+   - 90–99%: Textbook-clear, unambiguous symptoms with multiple confirming signs
+   - 75–89%: Clear primary symptom but one or two alternative diagnoses cannot be fully excluded
+   - 60–74%: Symptoms present but image quality, angle, or early-stage limits certainty
+   - Below 60%: Ambiguous or image too blurry/distant for confident diagnosis
+5. BE REPRODUCIBLE. Every time this exact image is analysed, the conclusion must be identical.`
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `Carefully examine this agricultural photograph and produce a diagnosis report. 
+              text: `Analyse this crop/plant photograph using the structured chain-of-thought process below. Work through EVERY step before writing the final report.
 
-CRITICAL INSTRUCTION: Describe ONLY what you can DIRECTLY SEE in the image. Quote specific visual evidence for each claim (e.g., "The interveinal chlorosis on the older lower leaves, with green veins remaining, suggests..."). Do not generate generic disease descriptions if the symptoms are not visible.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHAIN-OF-THOUGHT (internal reasoning — do this before answering):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Respond EXACTLY in this WhatsApp format (keep all section headings as-is):
+STEP A — IDENTIFY THE PLANT:
+• Crop species, growth stage, and approximate age if visible.
 
-🌾 UCF Crop Diagnosis
+STEP B — SCAN FOR SYMPTOMS (for each, state PRESENT / ABSENT / UNCLEAR):
+1. Chlorosis (yellowing) on OLDER lower leaves
+2. Chlorosis (yellowing) on YOUNGER upper leaves
+3. Interveinal chlorosis (veins stay green, lamina yellows)
+4. Marginal/tip chlorosis or necrosis (leaf edges/tips brown or yellow)
+5. Uniform pale-green or yellow on entire plant
+6. Circular or irregular brown/black spots or lesions
+7. Water-soaked or greasy-looking lesions
+8. White, grey, or orange powdery/fuzzy growth on surface
+9. Wilting, rolling, or curling leaves
+10. Stunted or distorted growth / mosaic / ring patterns
+11. Stem lesions, cankers, or basal rot
+12. Root issues (if visible)
+13. Insect presence, feeding holes, frass, webbing, tunnelling
 
-IDENTIFICATION:
-Crop: [Specific crop or plant type visible, or "Unknown crop" if unclear]
-Issue Detected: [Specific disease/deficiency/pest issue based on visible symptoms OR "Healthy – no symptoms observed"]
-AI Confidence: [50%–99% — be conservative; only go above 85% if symptoms are very clear and textbook]
+STEP C — DIFFERENTIAL DIAGNOSIS:
+Based on Step B, list the top 1–3 candidate diagnoses and explain which symptoms SUPPORT and which symptoms RULE OUT each candidate. Be explicit, e.g.:
+- "Mg deficiency: SUPPORTED by interveinal chlorosis on older leaves. RULED OUT: not Fe deficiency because symptoms are on older not younger leaves."
 
-DETAILED ANALYSIS:
-[3–5 sentences describing exactly what you SEE in the image: leaf color changes, pattern of symptoms (which leaves, which part of leaf), lesion characteristics, tissue damage, and what the specific visual pattern indicates. Quote specific observations like "upper leaves are yellow while lower leaves are green" or "circular brown spots with yellow halo on mid-canopy leaves".]
+STEP D — FINAL DIAGNOSIS with confidence rationale.
 
-PROBABLE CAUSES:
-• [Cause 1 — directly linked to visible symptom]
-• [Cause 2 — alternative or contributing cause]
-• [Cause 3 — environmental or management factor]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Now write the FINAL REPORT in this exact WhatsApp format:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-IMMEDIATE CONTROL ACTIONS:
-• [Urgent practical action 1 the farmer can do today]
+🌾 *UCF Crop Diagnosis*
+
+*IDENTIFICATION:*
+Crop: [Species and growth stage]
+Issue Detected: [Primary diagnosis — be specific, e.g. "Magnesium (Mg) deficiency" not just "nutrient deficiency"]
+AI Confidence: [XX% — include one sentence explaining the confidence level]
+
+*VISUAL EVIDENCE:*
+[2–4 bullet points, each quoting EXACTLY what is visible in the image and what it indicates. Use precise anatomical language: "interveinal chlorosis on 3rd–5th oldest leaves", "circular brown lesions 5–10mm diameter with yellow halo on mid-canopy leaves", etc.]
+• [Observation 1 → what it indicates]
+• [Observation 2 → what it indicates]
+• [Observation 3 → what it indicates]
+
+*DIFFERENTIAL DIAGNOSIS:*
+✅ Most likely: [Diagnosis 1] — [1 sentence of supporting evidence from the image]
+⚠️ Ruled out: [Diagnosis 2] — [1 sentence explaining why the visible symptoms don't match]
+⚠️ Ruled out: [Diagnosis 3] — [1 sentence explaining why]
+
+*PROBABLE CAUSES:*
+• [Root cause 1 — directly linked to the primary diagnosis]
+• [Root cause 2 — contributing or predisposing factor]
+• [Root cause 3 — environmental or management factor]
+
+*IMMEDIATE ACTIONS (do today):*
+• [Action 1 — specific and practical]
 • [Action 2]
 • [Action 3]
 
-TREATMENT PLAN:
-[2–4 sentences: specific treatment approach, spray frequency, dosage guidance, and expected recovery time if farmer follows plan correctly.]
+*TREATMENT PLAN:*
+[3–5 sentences: exact treatment product type, application method, dosage per hectare or per litre of water, spray interval, and expected visible recovery timeline.]
 
-UCF FERTILIZER RECOMMENDATION:
-[Choose 1–2 products from the UCF list that DIRECTLY address the observed deficiency or support recovery. State application rate per hectare and explain specifically how this product targets the observed symptom. If the issue is a fungal/bacterial disease and fertilizer alone won't help, state that clearly and recommend crop management instead.]
+*UCF PRODUCT RECOMMENDATION:*
+[Select the 1–2 most relevant UCF products from the list below. For each: state the product name, application rate per hectare, why it specifically addresses the diagnosed issue, and how quickly results should be visible. If the issue is purely fungal/bacterial/viral/pest and fertiliser cannot fix it, say so clearly and recommend fungicide/pesticide instead.]
 
-PREVENTION MEASURES:
-• [Long-term prevention tip 1 specific to this issue]
-• [Long-term prevention tip 2]
-• [Long-term prevention tip 3]
+*PREVENTION:*
+• [Long-term prevention measure 1 — specific to this diagnosis]
+• [Prevention measure 2]
+• [Prevention measure 3]
 
-To connect to an agronomist, reply "Expert" or "Menu" to go to main menu.
+_To connect to a live agronomist, reply *Expert*. Type *Menu* to return to the main menu._
 
-Available UCF Products:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Available UCF Products (for recommendation only):
 ${productsList}`
             },
             {
@@ -125,8 +160,9 @@ ${productsList}`
           ]
         }
       ],
-      max_tokens: 1800,
-      temperature: 0.2
+      max_tokens: 2000,
+      temperature: 0.1,
+      seed: 42
     });
 
     const analysisText = response.choices[0].message.content;
@@ -155,13 +191,13 @@ ${productsList}`
 }
 
 /**
- * Analyze soil image using GPT-4 Vision
+ * Analyze soil image using GPT-4o Vision
  * @param {string} imagePath - Path to the soil image
  * @returns {Promise<Object>} - Soil analysis result
  */
 async function analyzeSoilImage(imagePath) {
   try {
-    console.log('🌱 Analyzing soil sample/report using GPT-4 Vision...');
+    console.log('🌱 Analyzing soil sample/report using GPT-4o Vision...');
 
     // Load UCF products for recommendations
     const products = loadProducts();
@@ -178,68 +214,87 @@ async function analyzeSoilImage(imagePath) {
     const imageExtension = imagePath.split('.').pop().toLowerCase();
     const mimeType = imageExtension === 'png' ? 'image/png' : 'image/jpeg';
 
-    // Call GPT-4 Vision API with soil analysis prompt
+    // Call GPT-4o Vision API with enhanced soil analysis prompt
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: `You are an expert soil scientist and agricultural consultant for UCF Fertilizers. Analyze soil test reports, soil samples, or soil-related images and provide detailed, actionable recommendations in farmer-friendly language.`
+          content: `You are Dr. Soil — a certified soil scientist and agricultural consultant specialising in smallholder farming systems across Africa and Asia.
+
+YOUR RULES:
+1. If the image is a LABORATORY SOIL TEST REPORT: extract every numeric value you can read (N, P, K, pH, OC%, EC, etc.) as accurately as possible. Do NOT estimate — only report values you can clearly read.
+2. If the image is a RAW SOIL SAMPLE or FIELD PHOTO: assess based on colour (Munsell or descriptive), texture, structure, moisture content, compaction signs, and organic matter indicators visible.
+3. NEVER fabricate values. Write "Not readable" if a value is present but illegible. Write "Not shown" if not in the image.
+4. Always tie your fertiliser recommendation directly to the specific deficiency or imbalance identified.
+5. Keep language practical and farmer-friendly.`
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `Analyze this soil image (could be a soil test report, soil sample photo, or soil condition image) and respond EXACTLY in the following WhatsApp message format:
+              text: `Examine this image carefully — it may be a soil test report, a soil sample photo, or a field soil condition photo.
 
-🌱 UCF Soil Analysis Report
+First, determine which type it is, then analyse accordingly.
 
-SOIL ASSESSMENT:
-Soil Type: [Sandy/Loamy/Clay/Mixed - based on visual appearance or report]
-Overall Health: [Excellent/Good/Fair/Poor]
-AI Confidence: [Number between 70% and 99%]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTERNAL REASONING (do this before answering):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Is this a lab report? If yes, read every number carefully.
+- Is this a soil photo? If yes, note: colour (dark/reddish/grey/pale), texture (sandy/clay/loamy), structure (crumbly/compacted/cloddy), moisture (wet/moist/dry), organic matter (dark rich layer visible?), any issues (cracks, crust, erosion).
+- What are the critical deficiencies or imbalances?
+- Which UCF products directly address those?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-NUTRIENT ANALYSIS:
-[If this is a test report, extract the values. If it's a soil sample photo, provide general assessment based on color, texture, and appearance]
-• Nitrogen (N): [Value and unit OR Low/Medium/High]
-• Phosphorus (P): [Value and unit OR Low/Medium/High]
-• Potassium (K): [Value and unit OR Low/Medium/High]
-• pH Level: [Value OR Acidic/Neutral/Alkaline]
-• Organic Matter: [Percentage OR Low/Medium/High]
+Now write the FINAL REPORT in this exact WhatsApp format:
 
-DETAILED OBSERVATIONS:
-[2-4 sentences describing what you observe - soil color, texture, moisture, compaction, visible issues, or test report findings]
+🌱 *UCF Soil Analysis Report*
 
-KEY FINDINGS:
-• [Finding 1 - nutrient deficiency, pH issue, or soil health concern]
-• [Finding 2]
-• [Finding 3]
+*IMAGE TYPE:* [Lab Test Report / Soil Sample Photo / Field Soil Photo]
 
-IMMEDIATE RECOMMENDATIONS:
-• [Practical action 1 the farmer can take now]
-• [Practical action 2]
-• [Practical action 3]
+*SOIL ASSESSMENT:*
+Soil Type: [Sandy / Loamy / Clay / Silty / Mixed — based on image evidence]
+Overall Health: [Excellent / Good / Fair / Poor]
+AI Confidence: [XX% — one sentence explaining the basis]
 
-UCF FERTILIZER RECOMMENDATIONS:
-[Recommend 1-3 relevant UCF products based on the soil analysis. Include application rates per hectare and explain how each product addresses specific soil needs]
+*NUTRIENT PROFILE:*
+• Nitrogen (N): [Exact value from report OR "Low/Medium/High" from visual assessment]
+• Phosphorus (P): [Exact value OR assessment]
+• Potassium (K): [Exact value OR assessment]
+• pH: [Exact value OR "Acidic/Neutral/Alkaline"]
+• Organic Carbon (OC) / Organic Matter: [Value OR assessment]
+• Other notable values: [Any EC, Ca, Mg, Zn, Fe, Mn readings visible, OR "Not shown"]
 
-SOIL IMPROVEMENT PLAN:
-[2-4 sentences with a clear plan for improving soil health - amendments needed, timing, frequency, and expected results]
+*VISUAL OBSERVATIONS:*
+[3–4 bullet points describing exactly what you observe — soil colour, texture, structure, compaction, moisture, crust formation, erosion signs, or specific lab values and what they indicate]
+• [Observation 1 → implication]
+• [Observation 2 → implication]
+• [Observation 3 → implication]
 
-CROP SUITABILITY:
-[Suggest 2-3 crops that would grow well in this soil type and condition, or crops to avoid]
+*KEY FINDINGS & CONCERNS:*
+• [Critical finding 1 — e.g. "pH 5.2 indicates severe acidity — most nutrients unavailable to plants"]
+• [Critical finding 2]
+• [Critical finding 3]
 
-To connect to an agronomist, reply "Expert" or "Menu" to go to main menu.
+*IMMEDIATE RECOMMENDATIONS:*
+• [Action 1 — specific, actionable today]
+• [Action 2]
+• [Action 3]
 
-IMPORTANT RULES:
-- If this is a test report, extract all visible values accurately
-- If this is a soil sample photo, provide assessment based on visual characteristics
-- Be specific with fertilizer recommendations and application rates
-- Keep language simple and practical for smallholder farmers
-- Match UCF products to the specific soil needs identified
+*UCF PRODUCT RECOMMENDATIONS:*
+[For each recommended product: name, application rate per hectare, why it specifically addresses the findings, and expected improvement timeline. Match products to the exact deficiencies identified.]
 
-Available UCF Products:
+*SOIL IMPROVEMENT PLAN:*
+[3–5 sentences: what to apply, in what order, with what timing, and what improvement to expect after each season.]
+
+*CROP SUITABILITY:*
+[Based on the soil type and condition, name 2–3 crops well-suited for this soil, and 1–2 crops to avoid, with brief reasoning.]
+
+_To connect to a live agronomist, reply *Expert*. Type *Menu* to return to the main menu._
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Available UCF Products (for recommendation):
 ${productsList}`
             },
             {
@@ -252,8 +307,9 @@ ${productsList}`
           ]
         }
       ],
-      max_tokens: 1800,
-      temperature: 0.2
+      max_tokens: 2000,
+      temperature: 0.1,
+      seed: 42
     });
 
     const analysisText = response.choices[0].message.content;
@@ -264,12 +320,9 @@ ${productsList}`
     const healthMatch = analysisText.match(/Overall Health:\s*(.+)/i);
     const soilHealth = healthMatch ? healthMatch[1].trim() : 'Soil Analysis Complete';
 
-    // Determine confidence score based on health assessment
-    let confidenceScore = 0.85;
-    if (analysisText.toLowerCase().includes('excellent')) confidenceScore = 0.95;
-    else if (analysisText.toLowerCase().includes('good')) confidenceScore = 0.90;
-    else if (analysisText.toLowerCase().includes('fair')) confidenceScore = 0.80;
-    else if (analysisText.toLowerCase().includes('poor')) confidenceScore = 0.75;
+    // Extract confidence score from the response text
+    const soilConfidenceMatch = analysisText.match(/AI Confidence:\s*(\d+)%/i);
+    let confidenceScore = soilConfidenceMatch ? Math.max(0.5, Math.min(0.99, parseInt(soilConfidenceMatch[1]) / 100)) : 0.85;
 
     return {
       disease: soilHealth,
@@ -279,7 +332,7 @@ ${productsList}`
     };
 
   } catch (error) {
-    console.error('❌ GPT-4 Vision Soil Analysis Error:', error.message);
+    console.error('❌ GPT-4o Vision Soil Analysis Error:', error.message);
     throw error;
   }
 }

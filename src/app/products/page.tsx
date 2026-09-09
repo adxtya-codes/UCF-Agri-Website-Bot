@@ -28,6 +28,7 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [bulkImportOpen, setBulkImportOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -39,10 +40,15 @@ export default function ProductsPage() {
 
     const fetchProducts = async () => {
         setLoading(true);
-        const res = await fetch("/api/products");
-        const data = await res.json();
-        setProducts(data);
-        setLoading(false);
+        try {
+            const res = await fetch("/api/products");
+            const data = await res.json();
+            setProducts(data);
+        } catch (err) {
+            console.error("Failed to fetch products:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleAdd = () => {
@@ -66,21 +72,50 @@ export default function ProductsPage() {
         setDialogOpen(true);
     };
 
+    /** Parse a comma-separated string into a clean string array, filtering empty entries */
+    const parseCSV = (value: string): string[] =>
+        value
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+
     const handleSave = async () => {
-        if (!formData.name) {
+        if (!formData.name?.trim()) {
             alert("Product name is required");
             return;
         }
 
-        const method = editingProduct ? "PUT" : "POST";
-        await fetch("/api/products", {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
-        });
+        setSaving(true);
+        try {
+            const method = editingProduct ? "PUT" : "POST";
+            const payload = {
+                ...formData,
+                // Ensure arrays are clean (not [""] from empty textarea)
+                function: Array.isArray(formData.function) ? formData.function.filter(Boolean) : [],
+                crop_usage: Array.isArray(formData.crop_usage) ? formData.crop_usage.filter(Boolean) : [],
+                benefits: Array.isArray(formData.benefits) ? formData.benefits.filter(Boolean) : [],
+            };
 
-        setDialogOpen(false);
-        fetchProducts();
+            const res = await fetch("/api/products", {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Failed to save product: ${errData.error || res.statusText}`);
+                return;
+            }
+
+            setDialogOpen(false);
+            await fetchProducts();
+        } catch (err) {
+            console.error("Save failed:", err);
+            alert("An unexpected error occurred. Please try again.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -327,7 +362,7 @@ Compound D,7,14,7,Starter fertilizer,Neutral to acidic,At planting`;
                                 onChange={(e) =>
                                     setFormData({
                                         ...formData,
-                                        function: e.target.value.split(",").map((s) => s.trim()),
+                                        function: parseCSV(e.target.value),
                                     })
                                 }
                                 placeholder="e.g., Promotes growth, Increases yield"
@@ -342,7 +377,7 @@ Compound D,7,14,7,Starter fertilizer,Neutral to acidic,At planting`;
                                 onChange={(e) =>
                                     setFormData({
                                         ...formData,
-                                        crop_usage: e.target.value.split(",").map((s) => s.trim()),
+                                        crop_usage: parseCSV(e.target.value),
                                     })
                                 }
                                 placeholder="e.g., Rice, Wheat, Cotton"
@@ -357,7 +392,7 @@ Compound D,7,14,7,Starter fertilizer,Neutral to acidic,At planting`;
                                 onChange={(e) =>
                                     setFormData({
                                         ...formData,
-                                        benefits: e.target.value.split(",").map((s) => s.trim()),
+                                        benefits: parseCSV(e.target.value),
                                     })
                                 }
                                 placeholder="e.g., Better root development, Higher productivity"
@@ -393,11 +428,15 @@ Compound D,7,14,7,Starter fertilizer,Neutral to acidic,At planting`;
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>
-                            {editingProduct ? "Update" : "Create"}
+                        <Button onClick={handleSave} disabled={saving}>
+                            {saving ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                            ) : (
+                                editingProduct ? "Update" : "Create"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

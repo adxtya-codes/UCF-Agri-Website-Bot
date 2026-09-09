@@ -11,10 +11,8 @@ export async function POST(request: NextRequest) {
     const products = await readJSON<Product>("products.json");
     const newProduct: Product = await request.json();
 
-    // Generate ID if not provided
-    if (!newProduct.id) {
-        newProduct.id = Date.now().toString();
-    }
+    // Always generate a unique ID for new products
+    newProduct.id = `prod_${Date.now()}`;
 
     products.push(newProduct);
     await writeJSON("products.json", products);
@@ -26,9 +24,22 @@ export async function PUT(request: NextRequest) {
     const products = await readJSON<Product>("products.json");
     const updatedProduct: Product = await request.json();
 
-    const index = products.findIndex((p) => p.id === updatedProduct.id);
+    // Match by id first; fall back to name for legacy products without an id
+    let index = updatedProduct.id
+        ? products.findIndex((p) => p.id === updatedProduct.id)
+        : -1;
+
+    if (index === -1 && updatedProduct.name) {
+        index = products.findIndex((p) => p.name === updatedProduct.name);
+    }
+
     if (index === -1) {
         return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Preserve the original id if the updated payload doesn't have one
+    if (!updatedProduct.id && products[index].id) {
+        updatedProduct.id = products[index].id;
     }
 
     products[index] = updatedProduct;
