@@ -524,6 +524,13 @@ client.on('message', async (message) => {
 
     console.log(`\n📨 Message from ${phoneNumber}: ${messageBody.substring(0, 50)}...`);
 
+    // ⚠️ TEMPORARY SERVICE NOTIFICATION — Remove this block when service is restored
+    await safeSendMessage(message,
+      `⚠️ _Service Notification_\n\n_We're currently experiencing compatibility issues with the WhatsApp messaging interface. The current integration is no longer operating reliably and may result in interrupted or failed message processing._\n\n_Please discontinue use of this service temporarily. Further access will be restored once the underlying integration has been updated and stability has been verified._\n\n_*Reference: E323EC*_\n_*Status: Service Temporarily Unavailable*_`
+    );
+    return;
+    // ⚠️ END TEMPORARY SERVICE NOTIFICATION
+
     // Track this as the last message (for reconnection handling)
     lastMessageBeforeDisconnect = {
       from: phoneNumber,
