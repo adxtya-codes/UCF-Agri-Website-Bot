@@ -1,4 +1,4 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -98,24 +98,7 @@ function clearWhatsAppCache() {
   return cleared;
 }
 
-// Initialize WhatsApp client
-const client = new Client({
-  authStrategy: new LocalAuth({
-    clientId: process.env.SESSION_NAME || 'UCF_AGRIBOT'
-  }),
-  puppeteer: {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  }
-});
+
 
 /**
  * Initialize WhatsApp client with automatic cache error recovery
